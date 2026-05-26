@@ -1,6 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MembersController } from './members.controller';
+import { createMemberSchema, MembersController, updateMemberSchema } from './members.controller';
 
 interface MemberRow {
   id: string;
@@ -101,9 +101,9 @@ function makeStub() {
       count: vi.fn(async ({ where }: { where: WhereInput }) => {
         return applyWhere([...members.values()], where).length;
       }),
-      create: vi.fn(async ({ data }: { data: Partial<MemberRow> & { tenantId: string; externalId: string } }) => {
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
         seq++;
-        const m: MemberRow = {
+        const m: Record<string, unknown> = {
           id: `member-${seq}`,
           tenantId: data.tenantId,
           fullName: data.fullName ?? '',
@@ -113,8 +113,10 @@ function makeStub() {
           provider: 'NATIVE',
           lastCheckinAt: null,
           joinedAt: new Date('2026-01-01'),
+          emergencyContact: data.emergencyContact ?? null,
+          assignedTrainerId: data.assignedTrainerId ?? null,
         };
-        members.set(m.id, m);
+        members.set(m.id as string, m as MemberRow);
         return m;
       }),
       update: vi.fn(async ({ where, data }: { where: { id: string }; data: Partial<MemberRow> }) => {
@@ -417,6 +419,195 @@ describe('MembersController', () => {
       expect(call.where.memberId).toBe(m.id);
       expect(call.where.status.in).toEqual(['BOOKED', 'WAITLISTED']);
       expect(call.data.status).toBe('CANCELLED');
+    });
+
+    it('throws NotFoundException when member does not exist', async () => {
+      await expect(ctrl.deactivate(makeUser('tenant-1'), 'no-such-id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('sets member membershipStatus to CANCELLED after deactivation', async () => {
+      const m = stub.addMember({ tenantId: 'tenant-1', membershipStatus: 'ACTIVE' });
+      await ctrl.deactivate(makeUser('tenant-1'), m.id);
+      expect(stub.members.get(m.id)!.membershipStatus).toBe('CANCELLED');
+    });
+  });
+
+  describe('create() – new fields', () => {
+    it('stores emergencyContact when provided', async () => {
+      const result = await ctrl.create(makeUser(), {
+        fullName: 'Zara',
+        emergencyContact: { name: 'Husband', phone: '+971501111111' },
+      });
+      const created = result as unknown as { emergencyContact?: { name: string; phone: string } };
+      expect(created.emergencyContact).toEqual({ name: 'Husband', phone: '+971501111111' });
+    });
+
+    it('stores assignedTrainerId when provided', async () => {
+      const result = await ctrl.create(makeUser(), {
+        fullName: 'Zara',
+        assignedTrainerId: 'staff-1',
+      });
+      const created = result as unknown as { assignedTrainerId: string | null };
+      expect(created.assignedTrainerId).toBe('staff-1');
+    });
+
+    it('stores null for emergencyContact when not provided', async () => {
+      const result = await ctrl.create(makeUser(), { fullName: 'Zara' });
+      const created = result as unknown as { emergencyContact: unknown };
+      expect(created.emergencyContact).toBeNull();
+    });
+
+    it('stores null for assignedTrainerId when not provided', async () => {
+      const result = await ctrl.create(makeUser(), { fullName: 'Zara' });
+      const created = result as unknown as { assignedTrainerId: string | null };
+      expect(created.assignedTrainerId).toBeNull();
+    });
+  });
+
+  describe('update() – new fields', () => {
+    it('updates emergencyContact for an existing member', async () => {
+      const m = stub.addMember({ tenantId: 'tenant-1', fullName: 'Alice' });
+      await ctrl.update(makeUser('tenant-1'), m.id, {
+        emergencyContact: { name: 'Brother', phone: '+971502222222' },
+      });
+      const updated = stub.members.get(m.id)!;
+      expect(updated).toBeDefined();
+    });
+
+    it('updates assignedTrainerId to a new value', async () => {
+      const m = stub.addMember({ tenantId: 'tenant-1', fullName: 'Alice' });
+      await ctrl.update(makeUser('tenant-1'), m.id, { assignedTrainerId: 'staff-2' });
+      const updated = stub.members.get(m.id)!;
+      expect(updated).toBeDefined();
+    });
+
+    it('allows clearing assignedTrainerId by setting to null', async () => {
+      const m = stub.addMember({ tenantId: 'tenant-1', fullName: 'Alice' });
+      await ctrl.update(makeUser('tenant-1'), m.id, { assignedTrainerId: null });
+      const updated = stub.members.get(m.id)!;
+      expect(updated).toBeDefined();
+    });
+
+    it('throws NotFoundException when updating a non-existent member', async () => {
+      await expect(
+        ctrl.update(makeUser('tenant-1'), 'no-such-id', { fullName: 'Ghost' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('get() – new fields', () => {
+    it('returns emergencyContact in member detail when set', async () => {
+      const m = stub.addMember({
+        tenantId: 'tenant-1',
+        fullName: 'Alice',
+      });
+      // Directly set it on the in-memory row since the stub addMember doesn't support it
+      (m as unknown as { emergencyContact: unknown }).emergencyContact = { name: 'Mom', phone: '+971503333333' };
+
+      const result = await ctrl.get(makeUser('tenant-1'), m.id);
+      const detail = result as unknown as { emergencyContact?: { name: string; phone: string } };
+      expect(detail.emergencyContact).toEqual({ name: 'Mom', phone: '+971503333333' });
+    });
+
+    it('returns assignedTrainerId in member detail when set', async () => {
+      const m = stub.addMember({
+        tenantId: 'tenant-1',
+        fullName: 'Alice',
+      });
+      (m as unknown as { assignedTrainerId: string | null }).assignedTrainerId = 'staff-5';
+
+      const result = await ctrl.get(makeUser('tenant-1'), m.id);
+      const detail = result as unknown as { assignedTrainerId: string | null };
+      expect(detail.assignedTrainerId).toBe('staff-5');
+    });
+  });
+
+  describe('phone validation (Zod)', () => {
+    it('accepts a valid E.164 UAE number', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'Test', phone: '+971501234567' })).not.toThrow();
+    });
+
+    it('accepts phone=null (optional field)', () => {
+      const parsed = createMemberSchema.parse({ fullName: 'Test', phone: null });
+      expect(parsed.phone).toBeNull();
+    });
+
+    it('accepts no phone at all (optional field)', () => {
+      const parsed = createMemberSchema.parse({ fullName: 'Test' });
+      expect(parsed.phone).toBeUndefined();
+    });
+
+    it('rejects phone without leading +', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'Test', phone: '971501234567' })).toThrow();
+    });
+
+    it('rejects phone that is too short (< 8 digits)', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'Test', phone: '+123' })).toThrow();
+    });
+
+    it('rejects phone that starts with +0', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'Test', phone: '+0123456789' })).toThrow();
+    });
+
+    it('rejects empty string phone (invalid format)', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'Test', phone: '' })).toThrow();
+    });
+
+    it('accepts a valid international phone number', () => {
+      expect(() =>
+        createMemberSchema.parse({ fullName: 'Test', phone: '+447911123456' }),
+      ).not.toThrow();
+    });
+
+    it('rejects fullName shorter than 1 character', () => {
+      expect(() => createMemberSchema.parse({ fullName: '' })).toThrow();
+    });
+
+    it('rejects fullName longer than 200 characters', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'A'.repeat(201) })).toThrow();
+    });
+
+    it('rejects invalid email format', () => {
+      expect(() => createMemberSchema.parse({ fullName: 'Test', email: 'not-an-email' })).toThrow();
+    });
+
+    it('accepts valid email', () => {
+      const parsed = createMemberSchema.parse({ fullName: 'Test', email: 'test@example.com' });
+      expect(parsed.email).toBe('test@example.com');
+    });
+
+    it('rejects medicalNotes longer than 1000 characters', () => {
+      expect(() =>
+        createMemberSchema.parse({ fullName: 'Test', medicalNotes: 'X'.repeat(1001) }),
+      ).toThrow();
+    });
+
+    it('accepts medicalNotes at exactly 1000 characters', () => {
+      expect(() =>
+        createMemberSchema.parse({ fullName: 'Test', medicalNotes: 'X'.repeat(1000) }),
+      ).not.toThrow();
+    });
+  });
+
+  describe('updateMemberSchema validation', () => {
+    it('allows partial update with only fullName', () => {
+      const parsed = updateMemberSchema.parse({ fullName: 'Updated' });
+      expect(parsed.fullName).toBe('Updated');
+    });
+
+    it('allows partial update with only email', () => {
+      const parsed = updateMemberSchema.parse({ email: 'new@example.com' });
+      expect(parsed.email).toBe('new@example.com');
+    });
+
+    it('allows partial update to set phone to null', () => {
+      const parsed = updateMemberSchema.parse({ phone: null });
+      expect(parsed.phone).toBeNull();
+    });
+
+    it('allows empty object (update nothing)', () => {
+      const parsed = updateMemberSchema.parse({});
+      expect(parsed).toEqual({});
     });
   });
 });

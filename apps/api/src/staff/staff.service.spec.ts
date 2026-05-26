@@ -144,6 +144,84 @@ describe('StaffService', () => {
     const b = await svc.create('t1', { fullName: 'B', role: 'TRAINER', pin: '8888' });
     await expect(svc.update('t1', b.id, { pin: '7777' })).rejects.toThrow(/PIN/i);
   });
+
+  it('reactivates a terminated staff member', async () => {
+    const c = await svc.create('t1', { fullName: 'A', role: 'TRAINER' });
+    await svc.terminate('t1', c.id);
+    await svc.reactivate('t1', c.id);
+    const row = stub.staffMap.get(c.id)!;
+    expect(row.active).toBe(true);
+    expect(row.terminatedAt).toBeNull();
+  });
+
+  it('list() with activeOnly=true excludes inactive staff', async () => {
+    const active = await svc.create('t1', { fullName: 'Active', role: 'TRAINER' });
+    const inactive = await svc.create('t1', { fullName: 'Inactive', role: 'TRAINER' });
+    await svc.terminate('t1', inactive.id);
+    const list = await svc.list('t1', true);
+    expect(list.every((s) => s.active)).toBe(true);
+    expect(list.find((s) => s.id === active.id)).toBeTruthy();
+    expect(list.find((s) => s.id === inactive.id)).toBeUndefined();
+  });
+
+  it('list() with activeOnly=false includes all staff', async () => {
+    await svc.create('t1', { fullName: 'Active', role: 'TRAINER' });
+    const inactive = await svc.create('t1', { fullName: 'Inactive', role: 'TRAINER' });
+    await svc.terminate('t1', inactive.id);
+    const list = await svc.list('t1', false);
+    expect(list.some((s) => !s.active)).toBe(true);
+  });
+
+  it('updates staff details (name, role)', async () => {
+    const c = await svc.create('t1', { fullName: 'Old', role: 'TRAINER' });
+    await svc.update('t1', c.id, { fullName: 'New', role: 'MANAGER' });
+    const row = stub.staffMap.get(c.id)!;
+    expect(row.fullName).toBe('New');
+    expect(row.role).toBe('MANAGER');
+  });
+
+  it('get() throws NotFound for unknown staff', async () => {
+    await expect(svc.get('t1', 'ghost')).rejects.toThrow('Staff not found');
+  });
+
+  it('get() returns staff by ID', async () => {
+    const c = await svc.create('t1', { fullName: 'A', role: 'TRAINER' });
+    const s = await svc.get('t1', c.id);
+    expect(s.fullName).toBe('A');
+  });
+
+  it('verifyPin returns false for inactive staff', async () => {
+    const c = await svc.create('t1', { fullName: 'A', role: 'TRAINER', pin: '1234' });
+    await svc.terminate('t1', c.id);
+    await expect(svc.verifyPin('t1', c.id, '1234')).resolves.toBe(false);
+  });
+
+  it('findActiveByPin returns null for inactive staff', async () => {
+    const c = await svc.create('t1', { fullName: 'A', role: 'TRAINER', pin: '9999' });
+    await svc.terminate('t1', c.id);
+    await expect(svc.findActiveByPin('t1', '9999')).resolves.toBeNull();
+  });
+
+  it('creates staff without PIN (pinHash is null)', async () => {
+    const c = await svc.create('t1', { fullName: 'NoPin', role: 'TRAINER' });
+    expect(stub.staffMap.get(c.id)!.pinHash).toBeNull();
+  });
+
+  it('updates a staff member to set a PIN when they had none', async () => {
+    const c = await svc.create('t1', { fullName: 'A', role: 'TRAINER' });
+    await svc.update('t1', c.id, { pin: '4321' });
+    const row = stub.staffMap.get(c.id)!;
+    expect(row.pinHash).toBeTruthy();
+    await expect(svc.verifyPin('t1', c.id, '4321')).resolves.toBe(true);
+  });
+
+  it('findActiveByPin rejects invalid PIN format', async () => {
+    await expect(svc.findActiveByPin('t1', '123')).rejects.toThrow('Invalid PIN format');
+  });
+
+  it('findActiveByPin rejects PIN that is too long (> 8 digits)', async () => {
+    await expect(svc.findActiveByPin('t1', '123456789')).rejects.toThrow('Invalid PIN format');
+  });
 });
 
 describe('ShiftsService', () => {

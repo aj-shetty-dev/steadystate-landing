@@ -16,6 +16,10 @@ const config: Config = {
         error:   'rgb(var(--color-error)   / <alpha-value>)',
         warning: 'rgb(var(--color-warning) / <alpha-value>)',
       },
+      animation: {
+        'fade-in': 'fadeIn 0.2s ease-out forwards',
+        'pulse-soft': 'pulseSoft 1.5s ease-in-out infinite',
+      },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         display: ['var(--font-display)', 'sans-serif'],

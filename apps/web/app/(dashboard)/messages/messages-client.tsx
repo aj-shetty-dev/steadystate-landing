@@ -12,11 +12,13 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
-import type { MessageRow } from '../../../lib/api';
+import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
+import type { MessageRow, Paginated } from '../../../lib/api';
 
 const STATUSES = ['ALL', 'QUEUED', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'UNDELIVERED'] as const;
 const MEMBERSHIP_STATUSES = ['ACTIVE', 'FROZEN', 'EXPIRED', 'CANCELLED', 'PAUSED', 'PENDING'] as const;
@@ -26,26 +28,56 @@ function fmt(d: string | null): string {
   return new Date(d).toLocaleString();
 }
 
+function buildUrl(params: { search: string; status: string; from: string; to: string; page: number }): string {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set('search', params.search);
+  if (params.status && params.status !== 'ALL') qs.set('status', params.status);
+  if (params.from) qs.set('from', params.from);
+  if (params.to) qs.set('to', params.to);
+  if (params.page > 1) qs.set('page', String(params.page));
+  const str = qs.toString();
+  return str ? `/messages?${str}` : '/messages';
+}
+
 export function MessagesClient({
-  initialMessages,
-  initialTotal,
+  messagesPage,
   initialError,
+  initialSearch,
+  initialStatus,
+  initialFrom,
+  initialTo,
 }: {
-  initialMessages: MessageRow[];
-  initialTotal: number;
+  messagesPage: Paginated<MessageRow>;
   initialError: string | null;
+  initialSearch: string;
+  initialStatus: string;
+  initialFrom: string;
+  initialTo: string;
 }) {
-  const [messages, setMessages] = useState<MessageRow[]>(initialMessages);
-  const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  // Controlled loading / optimistic state
+  const [isLoading, setIsLoading] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState(initialStatus || 'ALL');
+  const [optimisticPage, setOptimisticPage] = useState(messagesPage.page);
+  const activeStatus = isLoading ? optimisticStatus : (initialStatus || 'ALL');
+  const activePage = isLoading ? optimisticPage : messagesPage.page;
+
+  useEffect(() => { setOptimisticStatus(initialStatus || 'ALL'); }, [initialStatus]);
+  useEffect(() => { setOptimisticPage(messagesPage.page); }, [messagesPage.page]);
+  useEffect(() => { setIsLoading(false); }, [initialStatus, messagesPage.page, messagesPage.items]);
+
+  const { items: messages, total } = messagesPage;
   const [error, setError] = useState<string | null>(initialError);
 
   // filters
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [search, setSearch] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(initialSearch);
+  const [fromDate, setFromDate] = useState(initialFrom);
+  const [toDate, setToDate] = useState(initialTo);
+
+  useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
+  useEffect(() => { setFromDate(initialFrom); }, [initialFrom]);
+  useEffect(() => { setToDate(initialTo); }, [initialTo]);
 
   // compose modal
   const [composeOpen, setComposeOpen] = useState(false);
@@ -67,41 +99,22 @@ export function MessagesClient({
   const [segmentCheckinTo, setSegmentCheckinTo] = useState('');
   const [broadcastResult, setBroadcastResult] = useState<{ sent: number; skipped: number; total: number } | null>(null);
 
-  const pageSize = 50;
+  const pageSize = messagesPage.pageSize || 50;
 
-  const loadMessages = useCallback(async (overrides?: { status?: string; search?: string; from?: string; to?: string; page?: number }) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const status = overrides?.status ?? statusFilter;
-      const searchVal = overrides?.search ?? search;
-      const from = overrides?.from ?? fromDate;
-      const to = overrides?.to ?? toDate;
-      const p = overrides?.page ?? page;
-
-      const params = new URLSearchParams();
-      params.set('page', String(p));
-      params.set('pageSize', String(pageSize));
-      if (status !== 'ALL') params.set('status', status);
-      if (searchVal) params.set('search', searchVal);
-      if (from) params.set('from', from);
-      if (to) params.set('to', to);
-
-      const res = await fetch(`/api/proxy/whatsapp/messages?${params.toString()}`);
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed to load');
-      const data = await res.json();
-      setMessages(data.items);
-      setTotal(data.total);
-    } catch (e) {
-      setError((e as { message?: string }).message ?? 'Failed to load messages');
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter, search, fromDate, toDate, page]);
+  function navigate(overrides: { status?: string; search?: string; from?: string; to?: string; page?: number }) {
+    const s = overrides.search ?? search;
+    const st = overrides.status ?? activeStatus;
+    const f = overrides.from ?? fromDate;
+    const t = overrides.to ?? toDate;
+    const p = overrides.page ?? 1;
+    if (overrides.status !== undefined) setOptimisticStatus(st);
+    if (overrides.page !== undefined) setOptimisticPage(p);
+    setIsLoading(true);
+    router.push(buildUrl({ search: s.trim(), status: st, from: f, to: t, page: p }));
+  }
 
   const applyFilters = () => {
-    setPage(1);
-    loadMessages({ page: 1 });
+    navigate({ page: 1 });
   };
 
   const handleSearchMembers = useCallback(async (q: string) => {
@@ -135,7 +148,7 @@ export function MessagesClient({
       setComposeBody('');
       setSelectedMember(null);
       setMemberSearch('');
-      loadMessages({ page: 1 });
+      router.refresh();
     } catch (e) {
       setComposeResult(`Error: ${(e as { message?: string }).message ?? 'Send failed'}`);
     } finally {
@@ -162,7 +175,7 @@ export function MessagesClient({
       const result = await res.json();
       setBroadcastResult(result);
       setComposeBody('');
-      loadMessages({ page: 1 });
+      router.refresh();
     } catch (e) {
       setComposeResult(`Error: ${(e as { message?: string }).message ?? 'Broadcast failed'}`);
     } finally {
@@ -175,7 +188,7 @@ export function MessagesClient({
     try {
       const res = await fetch(`/api/proxy/whatsapp/messages/${id}/resend`, { method: 'POST' });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Resend failed');
-      loadMessages();
+      router.refresh();
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Resend failed');
     }
@@ -201,8 +214,8 @@ export function MessagesClient({
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); loadMessages({ status: e.target.value, page: 1 }); }}
+          value={activeStatus}
+          onChange={(e) => navigate({ status: e.target.value, page: 1 })}
           className="bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text"
         >
           {STATUSES.map((s) => (
@@ -239,7 +252,7 @@ export function MessagesClient({
           Apply
         </button>
         <button
-          onClick={() => loadMessages()}
+          onClick={() => router.refresh()}
           className="p-2 text-text3 hover:text-text transition-colors"
           title="Refresh"
         >
@@ -254,20 +267,23 @@ export function MessagesClient({
       )}
 
       {/* Messages Table */}
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        {loading && messages.length === 0 ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-text3 animate-spin" />
-          </div>
+      <div
+        className="bg-surface border border-border rounded-lg overflow-hidden"
+        role="region"
+        aria-label="Messages list"
+        aria-busy={isLoading}
+      >
+        {isLoading && messages.length === 0 ? (
+          <TableSkeleton cols={7} rows={8} />
         ) : messages.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
             title="No messages found"
-            description={statusFilter !== 'ALL' || search || fromDate || toDate ? 'Try adjusting the filters.' : 'Send your first message to get started.'}
+            description={activeStatus !== 'ALL' || search || fromDate || toDate ? 'Try adjusting the filters.' : 'Send your first message to get started.'}
           />
         ) : (
           <>
-            <table className="w-full text-sm">
+            <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
               <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                 <tr>
                   <th className="text-left px-4 py-3">To</th>
@@ -312,28 +328,30 @@ export function MessagesClient({
                 ))}
               </tbody>
             </table>
-            <div className="flex items-center justify-between px-4 py-3 text-xs text-text3 border-t border-border bg-surface2/40">
-              <span>{total} total</span>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => { const p = page - 1; setPage(p); loadMessages({ page: p }); }}
-                    className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2 transition-colors"
-                  >
-                    Prev
-                  </button>
-                  <span>Page {page} of {totalPages}</span>
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => { const p = page + 1; setPage(p); loadMessages({ page: p }); }}
-                    className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2 transition-colors"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </div>
+            {!isLoading && (
+              <div className="flex items-center justify-between px-4 py-3 text-xs text-text3 border-t border-border bg-surface2/40">
+                <span>{total} total</span>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={activePage <= 1 || isLoading}
+                      onClick={() => navigate({ page: activePage - 1 })}
+                      className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2 transition-colors"
+                    >
+                      Prev
+                    </button>
+                    <span>Page {activePage} of {totalPages}</span>
+                    <button
+                      disabled={activePage >= totalPages || isLoading}
+                      onClick={() => navigate({ page: activePage + 1 })}
+                      className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2 transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

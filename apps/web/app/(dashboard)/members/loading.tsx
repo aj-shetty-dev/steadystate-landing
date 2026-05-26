@@ -5,7 +5,7 @@ export default function MembersLoading() {
   return (
     <div>
       <PageHeaderSkeleton hint="Fetching members…" />
-      <TableSkeleton cols={6} rows={8} />
+      <TableSkeleton cols={8} rows={8} />
     </div>
   );
 }

@@ -23,6 +23,8 @@ export const createMemberSchema = z.object({
   gender: z.nativeEnum(Gender).optional().nullable(),
   dateOfBirth: z.string().date().optional().nullable(),
   medicalNotes: z.string().max(1000).optional().nullable(),
+  emergencyContact: z.any().optional().nullable(),
+  assignedTrainerId: z.string().optional().nullable(),
 });
 
 export const updateMemberSchema = createMemberSchema.partial().extend({
@@ -129,6 +131,8 @@ export class MembersController {
         dateOfBirth: true,
         gender: true,
         source: true,
+        emergencyContact: true,
+        assignedTrainerId: true,
       },
     });
     if (!member) throw new NotFoundException('Member not found');
@@ -161,6 +165,8 @@ export class MembersController {
         gender: parsed.gender ?? null,
         dateOfBirth: parsed.dateOfBirth ? new Date(parsed.dateOfBirth) : null,
         medicalNotes: parsed.medicalNotes ?? null,
+        emergencyContact: parsed.emergencyContact ?? null,
+        assignedTrainerId: parsed.assignedTrainerId ?? null,
         raw: {},
       },
     });

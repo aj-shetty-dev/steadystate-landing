@@ -92,4 +92,40 @@ describe('WhatsappService', () => {
     ).rejects.toThrow();
     expect(prisma.whatsappMessage.create).not.toHaveBeenCalled();
   });
+
+  it('records templateName when provided', async () => {
+    await service.send({
+      tenantId: 't1',
+      request: { to: '+971501234567', body: 'welcome!', templateName: 'onboarding', locale: 'en' },
+    });
+    const createCall = prisma.whatsappMessage.create.mock.calls[0][0] as { data: { templateName: string | null } };
+    expect(createCall.data.templateName).toBe('onboarding');
+  });
+
+  it('records QUEUED then SENT lifecycle', async () => {
+    const createOrder: string[] = [];
+    const updateCalls: Array<{ status: string }> = [];
+    prisma.whatsappMessage.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+      createOrder.push('create');
+      return { id: 'msg_lifecycle', ...data };
+    });
+    prisma.whatsappMessage.update.mockImplementation(async ({ data }: { where: { id: string }; data: Partial<WhatsappMessageRow> }) => {
+      updateCalls.push({ status: data.status ?? 'UNKNOWN' });
+      return { id: 'msg_lifecycle', status: data.status ?? 'UNKNOWN', providerMessageId: null, errorMessage: null };
+    });
+
+    await service.send({
+      tenantId: 't1',
+      request: { to: '+971501234567', body: 'lifecycle test', locale: 'en' },
+    });
+
+    // First created as QUEUED
+    expect(prisma.whatsappMessage.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'QUEUED' }) }),
+    );
+    // Then updated to SENT
+    expect(prisma.whatsappMessage.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'SENT' }) }),
+    );
+  });
 });

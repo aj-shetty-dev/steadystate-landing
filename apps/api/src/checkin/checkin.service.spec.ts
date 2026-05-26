@@ -5,16 +5,18 @@ import { QrTokenService } from './qr-token.service';
 
 interface MemberRow { id: string; tenantId: string; fullName: string; phone: string; lastCheckinAt: Date | null; membershipStatus: MembershipStatus }
 interface QrRow { id: string; tenantId: string; memberId: string; token: string; expiresAt: Date }
-interface CheckInRow { id: string; tenantId: string; memberId: string; source: CheckInSource; sessionId: string | null; staffId: string | null; checkedInAt: Date }
+interface CheckInRow { id: string; tenantId: string; memberId: string; source: CheckInSource; sessionId: string | null; staffId: string | null; notes: string | null; checkedInAt: Date }
+interface BookingRow { id: string; tenantId: string; memberId: string; sessionId: string; status: string; checkedInAt: Date | null; session: { startsAt: Date } | null }
 
 function makeStub() {
   const members = new Map<string, MemberRow>();
   const qrs = new Map<string, QrRow>();
   const checkIns = new Map<string, CheckInRow>();
+  const bookings = new Map<string, BookingRow>();
   let seq = 0;
 
   const stub = {
-    members, qrs, checkIns,
+    members, qrs, checkIns, bookings,
     member: {
       findFirst: vi.fn(async ({ where }: { where: { id?: string; phone?: string; tenantId: string } }) => {
         return [...members.values()].find((m) => {
@@ -53,8 +55,23 @@ function makeStub() {
       }),
     },
     booking: {
-      findFirst: vi.fn(async () => null),
-      update: vi.fn(),
+      findFirst: vi.fn(async ({ where }: { where: { tenantId: string; memberId: string; status: string; session?: { startsAt?: { gte?: Date; lte?: Date } } } }) => {
+        const gte = where.session?.startsAt?.gte;
+        const lte = where.session?.startsAt?.lte;
+        return [...bookings.values()].find((b) => {
+          if (b.tenantId !== where.tenantId) return false;
+          if (b.memberId !== where.memberId) return false;
+          if (b.status !== where.status) return false;
+          if (gte && b.session && b.session.startsAt < gte) return false;
+          if (lte && b.session && b.session.startsAt > lte) return false;
+          return true;
+        }) ?? null;
+      }),
+      update: vi.fn(async ({ where, data }: { where: { id: string }; data: Partial<BookingRow> }) => {
+        const b = bookings.get(where.id);
+        if (b) Object.assign(b, data);
+        return b;
+      }),
     },
     staff: {
       findFirst: vi.fn(async ({ where }: { where: { id: string; tenantId: string; active?: boolean } }) => {
@@ -63,9 +80,18 @@ function makeStub() {
       }),
     },
     checkIn: {
-      create: vi.fn(async ({ data }: { data: Omit<CheckInRow, 'id' | 'sessionId' | 'staffId' | 'checkedInAt'> & { sessionId?: string; staffId?: string } }) => {
+      create: vi.fn(async ({ data }: { data: Omit<CheckInRow, 'id' | 'checkedInAt'> & { sessionId?: string | null; staffId?: string | null; notes?: string | null } }) => {
         seq += 1;
-        const r: CheckInRow = { id: `ci-${seq}`, sessionId: data.sessionId ?? null, staffId: data.staffId ?? null, checkedInAt: new Date(), ...data };
+        const r: CheckInRow = {
+          id: `ci-${seq}`,
+          tenantId: data.tenantId,
+          memberId: data.memberId,
+          source: data.source,
+          sessionId: data.sessionId ?? null,
+          staffId: data.staffId ?? null,
+          notes: data.notes ?? null,
+          checkedInAt: new Date(),
+        };
         checkIns.set(r.id, r);
         return r;
       }),
@@ -76,7 +102,18 @@ function makeStub() {
           .sort((a, b) => b.checkedInAt.getTime() - a.checkedInAt.getTime());
         return rows[0] ?? null;
       }),
-      findMany: vi.fn(async () => [...checkIns.values()]),
+      findMany: vi.fn(async ({ where }: { where: { tenantId: string; memberId?: string; checkedInAt?: { gte?: Date; lte?: Date } }; orderBy: { checkedInAt: 'desc' }; take: number; skip: number }) => {
+        return [...checkIns.values()]
+          .filter((c) => {
+            if (c.tenantId !== where.tenantId) return false;
+            if (where.memberId && c.memberId !== where.memberId) return false;
+            if (where.checkedInAt?.gte && c.checkedInAt < where.checkedInAt.gte) return false;
+            if (where.checkedInAt?.lte && c.checkedInAt > where.checkedInAt.lte) return false;
+            return true;
+          })
+          .sort((a, b) => b.checkedInAt.getTime() - a.checkedInAt.getTime())
+          .slice(where.skip ?? 0, (where.skip ?? 0) + (where.take ?? 200));
+      }),
     },
     $transaction: vi.fn(async (fn: ((tx: unknown) => Promise<unknown>) | unknown[]) => {
       if (Array.isArray(fn)) return Promise.all(fn);
@@ -170,5 +207,59 @@ describe('CheckInService', () => {
   it('allows check-in with valid staffId', async () => {
     const ci = await svc.create('t1', { source: 'MANUAL', memberId: 'm1', staffId: 'staff-1' });
     expect(ci.staffId).toBe('staff-1');
+  });
+
+  it('auto-links to a booked session within the 30-minute window', async () => {
+    const now = new Date();
+    const sessionStartsAt = new Date(now.getTime() + 10 * 60_000); // 10 min from now
+    stub.bookings.set('bk1', {
+      id: 'bk1', tenantId: 't1', memberId: 'm1', sessionId: 's1', status: 'BOOKED', checkedInAt: null,
+      session: { startsAt: sessionStartsAt },
+    });
+    const ci = await svc.create('t1', { source: 'KIOSK_QR', phone: '+9710' });
+    expect(ci.sessionId).toBe('s1');
+    expect(stub.bookings.get('bk1')!.status).toBe('CHECKED_IN');
+  });
+
+  it('does not link to sessions outside the window', async () => {
+    const now = new Date();
+    const farFuture = new Date(now.getTime() + 60 * 60_000); // 1 hour from now
+    stub.bookings.set('bk2', {
+      id: 'bk2', tenantId: 't1', memberId: 'm1', sessionId: 's2', status: 'BOOKED', checkedInAt: null,
+      session: { startsAt: farFuture },
+    });
+    const ci = await svc.create('t1', { source: 'MANUAL', memberId: 'm1' });
+    expect(ci.sessionId).toBeNull();
+  });
+
+  it('creates check-in with DOOR_EVENT source', async () => {
+    const ci = await svc.create('t1', { source: 'DOOR_EVENT', memberId: 'm1' });
+    expect(ci.source).toBe('DOOR_EVENT');
+    expect(ci.memberId).toBe('m1');
+  });
+
+  it('normalizes phone with 00 prefix to E.164', async () => {
+    stub.members.set('m00', { id: 'm00', tenantId: 't1', fullName: 'Intl', phone: '+442071234567', lastCheckinAt: null, membershipStatus: MembershipStatus.ACTIVE });
+    const ci = await svc.create('t1', { source: 'KIOSK_PIN', phone: '00442071234567' });
+    expect(ci.memberId).toBe('m00');
+  });
+
+  it('lists check-ins filtered by member', async () => {
+    await svc.create('t1', { source: 'MANUAL', memberId: 'm1' });
+    stub.members.set('m2', { id: 'm2', tenantId: 't1', fullName: 'B', phone: '+971511223344', lastCheckinAt: null, membershipStatus: MembershipStatus.ACTIVE });
+    await svc.create('t1', { source: 'MANUAL', memberId: 'm2' });
+    const list = await svc.list('t1', { memberId: 'm1' });
+    expect(list).toHaveLength(1);
+    expect(list[0].memberId).toBe('m1');
+  });
+
+  it('getMyQr issues a QR token for a valid member', async () => {
+    const qr = await svc.getMyQr('t1', 'm1');
+    expect(qr.memberId).toBe('m1');
+    expect(qr.token).toBeTruthy();
+  });
+
+  it('getMyQr throws for unknown member', async () => {
+    await expect(svc.getMyQr('t1', 'ghost')).rejects.toThrow('Member not found');
   });
 });

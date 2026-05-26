@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { CalendarPopover } from '../../../components/ui/calendar-popover';
 import { SelectField } from '../../../components/ui/select-field';
-import type { MemberDetail, MemberRow, MembershipPlanRow } from '../../../lib/api';
+import type { MemberDetail, MemberRow, MembershipPlanRow, StaffRow } from '../../../lib/api';
 
 interface Props {
   member?: MemberRow | MemberDetail | null;
@@ -22,6 +22,9 @@ type FormState = {
   gender: string;
   dateOfBirth: string;
   medicalNotes: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  assignedTrainerId: string;
   planId: string;
   planStartDate: string;
 };
@@ -58,6 +61,7 @@ export function MemberFormModal({ member, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plans, setPlans] = useState<MembershipPlanRow[]>([]);
+  const [staff, setStaff] = useState<StaffRow[]>([]);
   const isEdit = Boolean(member);
 
   const detail = member && isDetail(member) ? member : null;
@@ -71,6 +75,13 @@ export function MemberFormModal({ member, onClose }: Props) {
     }
   }, [isEdit]);
 
+  useEffect(() => {
+    fetch('/api/proxy/staff')
+      .then((r) => r.json())
+      .then((data: StaffRow[]) => setStaff(data))
+      .catch(() => null);
+  }, []);
+
   const [form, setForm] = useState<FormState>({
     fullName: member?.fullName ?? '',
     phone: member?.phone ?? '',
@@ -81,6 +92,9 @@ export function MemberFormModal({ member, onClose }: Props) {
     gender: detail?.gender ?? '',
     dateOfBirth: toDateInput(detail?.dateOfBirth),
     medicalNotes: detail?.medicalNotes ?? '',
+    emergencyContactName: (detail?.emergencyContact as { name?: string } | undefined)?.name ?? '',
+    emergencyContactPhone: (detail?.emergencyContact as { phone?: string } | undefined)?.phone ?? '',
+    assignedTrainerId: detail?.assignedTrainerId ?? '',
     planId: '',
     planStartDate: '',
   });
@@ -118,6 +132,16 @@ export function MemberFormModal({ member, onClose }: Props) {
     else payload.dateOfBirth = null;
     if (form.medicalNotes.trim()) payload.medicalNotes = form.medicalNotes.trim();
     else payload.medicalNotes = null;
+    if (form.emergencyContactName.trim() || form.emergencyContactPhone.trim()) {
+      payload.emergencyContact = {
+        name: form.emergencyContactName.trim() || undefined,
+        phone: form.emergencyContactPhone.trim() || undefined,
+      };
+    } else {
+      payload.emergencyContact = null;
+    }
+    if (form.assignedTrainerId) payload.assignedTrainerId = form.assignedTrainerId;
+    else payload.assignedTrainerId = null;
 
     try {
       const url = isEdit ? `/api/proxy/members/${member!.id}` : '/api/proxy/members';
@@ -276,6 +300,40 @@ export function MemberFormModal({ member, onClose }: Props) {
                 value={form.medicalNotes}
                 onChange={set('medicalNotes')}
                 className={`${inputCls} resize-none`}
+              />
+            </Field>
+
+            <div className="border-t border-border" />
+            <p className="text-[11px] font-semibold text-text3 uppercase tracking-widest">Emergency Contact</p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Name">
+                <input
+                  type="text" maxLength={200}
+                  placeholder="Contact person name"
+                  value={form.emergencyContactName} onChange={set('emergencyContactName')}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Phone">
+                <input
+                  type="tel" placeholder="+971501234567"
+                  value={form.emergencyContactPhone} onChange={set('emergencyContactPhone')}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+
+            <Field label="Assigned Trainer">
+              <SelectField
+                value={form.assignedTrainerId}
+                onChange={(v) => setForm((f) => ({ ...f, assignedTrainerId: v }))}
+                options={[
+                  { value: '', label: 'No trainer assigned' },
+                  ...staff
+                    .filter((s) => s.active)
+                    .map((s) => ({ value: s.id, label: s.fullName })),
+                ]}
               />
             </Field>
           </div>

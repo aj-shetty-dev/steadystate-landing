@@ -10,10 +10,12 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
+import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type { StaffRow } from '../../../lib/api';
 
 const ROLES = ['TRAINER', 'RECEPTION', 'MANAGER', 'CLEANER', 'OTHER'] as const;
@@ -30,8 +32,11 @@ interface Props {
 
 export function StaffClient({ staff: initialStaff, initialError }: Props) {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [staff, setStaff] = useState<StaffRow[]>(initialStaff);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { setIsLoading(false); }, [initialStaff]);
 
   // Form modal
   const [showForm, setShowForm] = useState(false);
@@ -56,6 +61,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
 
   // Action menu
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
 
   function resetForm() {
     setFormData({
@@ -132,7 +138,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
         setStaff((prev) => [...prev, created]);
       }
       setShowForm(false);
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -157,7 +163,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
       setShowPin(false);
       setPinTarget(null);
       setPinValue('');
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -174,7 +180,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
         throw new Error(b.message ?? `Error ${res.status}`);
       }
       setStaff((prev) => prev.map((x) => (x.id === s.id ? { ...x, active: false, terminatedAt: new Date().toISOString() } : x)));
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -190,7 +196,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
         throw new Error(b.message ?? `Error ${res.status}`);
       }
       setStaff((prev) => prev.map((x) => (x.id === s.id ? { ...x, active: true, terminatedAt: null } : x)));
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -229,15 +235,22 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
         </div>
       )}
 
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        {staff.length === 0 ? (
+      <div
+        className="bg-surface border border-border rounded-lg overflow-hidden"
+        role="region"
+        aria-label="Staff list"
+        aria-busy={isLoading}
+      >
+        {isLoading && staff.length === 0 ? (
+          <TableSkeleton cols={7} rows={5} />
+        ) : staff.length === 0 ? (
           <EmptyState
             icon={UserCog}
             title="No staff yet"
             description="Add a trainer or front-desk user to enable kiosk check-ins and POS."
           />
         ) : (
-          <table className="w-full text-sm">
+          <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
             <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3">Name</th>
@@ -280,15 +293,21 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="relative flex justify-end">
                       <button
-                        onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}
+                        onClick={(e) => {
+                          setMenuAnchorRect(e.currentTarget.getBoundingClientRect());
+                          setOpenMenuId(openMenuId === s.id ? null : s.id);
+                        }}
                         className="p-1.5 rounded-md hover:bg-surface2 text-text3 hover:text-text transition-colors"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
-                      {openMenuId === s.id && (
+                      {openMenuId === s.id && menuAnchorRect && createPortal(
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-8 z-20 min-w-[150px] rounded-lg border border-border bg-surface shadow-lg py-1">
+                          <div
+                            className="fixed z-20 min-w-[150px] rounded-lg border border-border bg-surface shadow-lg py-1"
+                            style={{ top: menuAnchorRect.bottom + 4, right: window.innerWidth - menuAnchorRect.right }}
+                          >
                             <button
                               className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
                               onClick={() => { setOpenMenuId(null); openEdit(s); }}
@@ -318,7 +337,8 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
                               </button>
                             )}
                           </div>
-                        </>
+                        </>,
+                        document.body
                       )}
                     </div>
                   </td>

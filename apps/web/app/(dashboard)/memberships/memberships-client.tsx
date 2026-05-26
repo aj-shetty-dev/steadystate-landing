@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../../components/ui/confirm-dialog';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { SelectField } from '../../../components/ui/select-field';
 import { StatusBadge } from '../../../components/ui/status-badge';
+import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type { MemberRow, MembershipPlanRow, MembershipRow, Paginated, UpcomingRenewalRow } from '../../../lib/api';
 import { PlanFormModal } from './plan-form-modal';
 
@@ -53,22 +54,34 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('memberships');
 
+  // Controlled loading / optimistic state
+  const [isLoading, setIsLoading] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState(initialStatus);
+  const [optimisticPage, setOptimisticPage] = useState(membershipsPage.page);
+  const activeStatus = isLoading ? optimisticStatus : initialStatus;
+  const activePage = isLoading ? optimisticPage : membershipsPage.page;
+
+  // Clear loading when server data arrives
+  useEffect(() => { setIsLoading(false); }, [initialStatus, membershipsPage.page, membershipsPage.items]);
+
   // URL-state for memberships list
   const [localSearch, setLocalSearch] = useState(initialSearch);
-  const [selectedStatus, setSelectedStatus] = useState(initialStatus);
+  const [optimisticSearch, setOptimisticSearch] = useState(initialSearch);
+  const activeSearch = isLoading ? optimisticSearch : initialSearch;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync local state when URL-driven props change (e.g. browser back/forward)
-  useEffect(() => { setLocalSearch(initialSearch); }, [initialSearch]);
-  useEffect(() => { setSelectedStatus(initialStatus); }, [initialStatus]);
+  useEffect(() => { setLocalSearch(initialSearch); setOptimisticSearch(initialSearch); }, [initialSearch]);
+  useEffect(() => { setOptimisticStatus(initialStatus); }, [initialStatus]);
+  useEffect(() => { setOptimisticPage(membershipsPage.page); }, [membershipsPage.page]);
   // Cleanup debounce on unmount
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   const buildUrl = useCallback(
     (overrides: { search?: string; status?: string; page?: number }) => {
       const params = new URLSearchParams();
-      const s = overrides.search ?? localSearch;
-      const st = overrides.status ?? selectedStatus;
+      const s = overrides.search ?? activeSearch;
+      const st = overrides.status ?? activeStatus;
       const p = overrides.page ?? 1;
       if (s) params.set('search', s);
       if (st) params.set('status', st);
@@ -76,19 +89,24 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
       const qs = params.toString();
       return `/memberships${qs ? '?' + qs : ''}`;
     },
-    [localSearch, selectedStatus],
+    [activeSearch, activeStatus],
   );
 
   function handleSearchChange(value: string) {
     setLocalSearch(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      setOptimisticSearch(value);
+      setOptimisticPage(1);
+      setIsLoading(true);
       router.push(buildUrl({ search: value, page: 1 }));
     }, 400);
   }
 
   function handleStatusChange(status: string) {
-    setSelectedStatus(status);
+    setOptimisticStatus(status);
+    setOptimisticPage(1);
+    setIsLoading(true);
     router.push(buildUrl({ status, page: 1 }));
   }
 
@@ -335,7 +353,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                   key={t.value}
                   onClick={() => handleStatusChange(t.value)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    selectedStatus === t.value
+                    activeStatus === t.value
                       ? 'bg-green/10 text-green'
                       : 'text-text2 hover:text-text hover:bg-surface2'
                   }`}
@@ -346,19 +364,26 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            {memberships.length === 0 ? (
+          <div
+            className="bg-surface border border-border rounded-lg overflow-hidden"
+            role="region"
+            aria-label="Memberships list"
+            aria-busy={isLoading}
+          >
+            {isLoading && memberships.length === 0 ? (
+              <TableSkeleton cols={7} rows={8} />
+            ) : memberships.length === 0 ? (
               <EmptyState
                 icon={CreditCard}
                 title="No memberships yet"
                 description={
-                  localSearch || selectedStatus
+                  activeSearch || activeStatus
                     ? 'No results match your search or filter.'
                     : 'Click "Assign membership" above to assign a plan to a member.'
                 }
               />
             ) : (
-              <table className="w-full text-sm">
+              <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
                 <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3">Member</th>
@@ -496,21 +521,27 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
           </div>
 
           {/* Pagination */}
-          {total > 0 && (
+          {!isLoading && total > 0 && (
             <div className="flex items-center justify-between text-sm text-text2 px-1">
               <span>{rangeStart}–{rangeEnd} of {total} memberships</span>
               <div className="flex items-center gap-2">
                 <button
-                  disabled={page <= 1}
-                  onClick={() => router.push(buildUrl({ page: page - 1 }))}
+                  disabled={activePage <= 1 || isLoading}
+                  onClick={() => {
+                    setOptimisticPage(activePage - 1);
+                    setIsLoading(true); router.push(buildUrl({ page: activePage - 1 }));
+                  }}
                   className="px-3 py-1.5 rounded-md border border-border bg-surface text-text2 hover:bg-surface2 disabled:opacity-40 transition-colors"
                 >
                   Prev
                 </button>
-                <span className="text-text3">{page} / {totalPages}</span>
+                <span className="text-text3">{activePage} / {totalPages}</span>
                 <button
-                  disabled={page >= totalPages}
-                  onClick={() => router.push(buildUrl({ page: page + 1 }))}
+                  disabled={activePage >= totalPages || isLoading}
+                  onClick={() => {
+                    setOptimisticPage(activePage + 1);
+                    setIsLoading(true); router.push(buildUrl({ page: activePage + 1 }));
+                  }}
                   className="px-3 py-1.5 rounded-md border border-border bg-surface text-text2 hover:bg-surface2 disabled:opacity-40 transition-colors"
                 >
                   Next

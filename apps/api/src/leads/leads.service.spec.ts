@@ -180,11 +180,102 @@ describe('LeadsService', () => {
   it('isolates list() by tenantId', async () => {
     await svc.create('t1', { fullName: 'Ali', phone: '+9711' });
     await svc.create('t2', { fullName: 'Sara', phone: '+9712' });
-    // stub.lead.findMany ignores the where clause but the service relies on findMany call signature
-    // For tenant isolation we verify the where clause is passed.
     await svc.list('t1');
     const calls = stub.lead.findMany.mock.calls as unknown as Array<[{ where: { tenantId: string } }]>;
     const lastCall = calls[calls.length - 1][0];
     expect(lastCall.where.tenantId).toBe('t1');
+  });
+
+  it('allows LOST -> NEW transition (revive)', async () => {
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await svc.update('t1', l.id, { stage: LeadStage.LOST });
+    await svc.update('t1', l.id, { stage: LeadStage.NEW });
+    expect(stub.leads.get(l.id)!.stage).toBe(LeadStage.NEW);
+  });
+
+  it('updates non-stage fields (phone, email)', async () => {
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await svc.update('t1', l.id, { phone: '+971511111111', email: 'ali@test.com' });
+    const updated = stub.leads.get(l.id)!;
+    expect(updated.phone).toBe('+971511111111');
+    expect(updated.email).toBe('ali@test.com');
+  });
+
+  it('get() returns lead with activities', async () => {
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await svc.addActivity('t1', l.id, 'u1', { type: 'CALL', summary: 'called' });
+    const lead = await svc.get('t1', l.id);
+    expect(lead.fullName).toBe('Ali');
+    expect(lead.activities).toHaveLength(1);
+  });
+
+  it('get() throws NotFound for unknown lead', async () => {
+    await expect(svc.get('t1', 'ghost')).rejects.toThrow('Lead not found');
+  });
+
+  it('CONVERTED lead cannot transition to any other stage', async () => {
+    stub.plans.set('p1', { id: 'p1', tenantId: 't1', durationDays: 30, active: true });
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await svc.convert('t1', l.id, { planId: 'p1' });
+    await expect(svc.update('t1', l.id, { stage: LeadStage.LOST })).rejects.toThrow(/Invalid stage transition/);
+  });
+
+  it('list() filters by stage', async () => {
+    await svc.create('t1', { fullName: 'Ali', phone: '+971500000001' });
+    const l2 = await svc.create('t1', { fullName: 'Sara', phone: '+971500000002' });
+    await svc.update('t1', l2.id, { stage: LeadStage.CONTACTED });
+    await svc.list('t1', { stage: LeadStage.NEW });
+    const calls = stub.lead.findMany.mock.calls as unknown as Array<[{ where: { tenantId: string; stage?: LeadStage } }]>;
+    const lastCall = calls[calls.length - 1][0];
+    expect(lastCall.where.stage).toBe(LeadStage.NEW);
+  });
+
+  it('list() filters by assignedToUserId', async () => {
+    await svc.create('t1', { fullName: 'Ali', phone: '+971500000001', assignedToUserId: 'u1' });
+    await svc.create('t1', { fullName: 'Sara', phone: '+971500000002', assignedToUserId: 'u2' });
+    await svc.list('t1', { assignedToUserId: 'u1' });
+    const calls = stub.lead.findMany.mock.calls as unknown as Array<[{ where: { tenantId: string; assignedToUserId?: string } }]>;
+    const lastCall = calls[calls.length - 1][0];
+    expect(lastCall.where.assignedToUserId).toBe('u1');
+  });
+
+  it('converts lead without plan (creates member but no membership)', async () => {
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    const r = await svc.convert('t1', l.id, {});
+    expect(r.memberId).toBeDefined();
+    expect(r.membershipId).toBeNull();
+    const member = stub.members.get(r.memberId)!;
+    expect(member.source).toBe('LEAD_CONVERSION');
+  });
+
+  it('convert throws when plan is not found', async () => {
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await expect(svc.convert('t1', l.id, { planId: 'no-such-plan' })).rejects.toThrow('Plan not found');
+  });
+
+  it('convert throws when plan is inactive', async () => {
+    stub.plans.set('p-inactive', { id: 'p-inactive', tenantId: 't1', durationDays: 30, active: false });
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await expect(svc.convert('t1', l.id, { planId: 'p-inactive' })).rejects.toThrow('Plan not found');
+  });
+
+  it('convert with startDate sets membership start correctly', async () => {
+    stub.plans.set('p1', { id: 'p1', tenantId: 't1', durationDays: 30, active: true });
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    const r = await svc.convert('t1', l.id, { planId: 'p1', startDate: '2026-06-01T00:00:00.000Z' });
+    expect(r.membershipId).toBeDefined();
+  });
+
+  it('rejects addActivity with invalid type', async () => {
+    const l = await svc.create('t1', { fullName: 'Ali', phone: '+971500000000' });
+    await expect(svc.addActivity('t1', l.id, 'u1', { type: 'INVALID' as never, summary: 'x' })).rejects.toThrow();
+  });
+
+  it('rejects addActivity on non-existent lead', async () => {
+    await expect(svc.addActivity('t1', 'ghost', 'u1', { type: 'CALL', summary: 'x' })).rejects.toThrow('Lead not found');
+  });
+
+  it('rejects create with empty fullName', async () => {
+    await expect(svc.create('t1', { fullName: '', phone: '+971500000000' })).rejects.toThrow();
   });
 });

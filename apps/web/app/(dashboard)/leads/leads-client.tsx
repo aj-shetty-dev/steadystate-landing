@@ -13,10 +13,11 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
+import { KanbanSkeleton } from '../../../components/skeletons/kanban-skeleton';
 import type { LeadRow } from '../../../lib/api';
 
 const STAGES = ['NEW', 'CONTACTED', 'TRIAL_BOOKED', 'TRIAL_COMPLETED', 'CONVERTED', 'LOST'] as const;
@@ -56,8 +57,11 @@ interface Props {
 
 export function LeadsClient({ leads: initialLeads, initialError }: Props) {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [leads, setLeads] = useState<LeadRow[]>(initialLeads);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { setIsLoading(false); }, [initialLeads]);
 
   // Add lead form
   const [showAdd, setShowAdd] = useState(false);
@@ -123,7 +127,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
       setLeads((prev) => [...prev, created]);
       setShowAdd(false);
       resetAddForm();
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -173,7 +177,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
         const b = (await res.json().catch(() => ({}))) as { message?: string };
         throw new Error(b.message ?? `Error ${res.status}`);
       }
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -214,7 +218,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
       // Refresh detail
       const refetch = await fetch(`/api/proxy/leads/${detailLead.id}`);
       if (refetch.ok) setDetailLead((await refetch.json()) as LeadRow);
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -243,7 +247,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
         prev.map((l) => (l.id === detailLead.id ? { ...l, stage: 'CONVERTED', convertedMemberId: result.memberId } : l)),
       );
       setDetailLead((prev) => (prev ? { ...prev, stage: 'CONVERTED', convertedMemberId: result.memberId } : null));
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -269,7 +273,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
       setLeads((prev) =>
         prev.map((l) => (l.id === detailLead.id ? { ...l, nextFollowUpAt: date ? new Date(date).toISOString() : null } : l)),
       );
-      router.refresh();
+      setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -310,7 +314,9 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
       )}
 
       {/* Kanban board */}
-      {leads.length === 0 ? (
+      {isLoading && leads.length === 0 ? (
+        <KanbanSkeleton />
+      ) : leads.length === 0 ? (
         <div className="bg-surface border border-border rounded-lg">
           <EmptyState
             icon={Target}
@@ -319,7 +325,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-3">
+        <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-3 transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
           {STAGES.map((stage) => {
             const list = groupMap.get(stage) ?? [];
             const isOver = dragOverStage === stage;

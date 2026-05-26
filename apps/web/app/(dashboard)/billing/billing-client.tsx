@@ -16,11 +16,13 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
-import type { InvoiceRow } from '../../../lib/api';
+import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
+import type { InvoiceRow, Paginated } from '../../../lib/api';
 
 const INVOICE_STATUSES = ['ALL', 'DUE', 'PAID', 'FAILED', 'RETRY_SCHEDULED', 'WRITTEN_OFF'] as const;
 
@@ -46,25 +48,52 @@ function fmtInputDate(d: string): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
+function buildUrl(params: { search: string; status: string; page: number }): string {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set('search', params.search);
+  if (params.status && params.status !== 'ALL') qs.set('status', params.status);
+  if (params.page > 1) qs.set('page', String(params.page));
+  const str = qs.toString();
+  return str ? `/billing?${str}` : '/billing';
+}
+
 export function BillingClient({
-  initialInvoices,
-  initialTotal,
+  invoicesPage,
   initialError,
+  initialSearch,
+  initialStatus,
 }: {
-  initialInvoices: InvoiceRow[];
-  initialTotal: number;
+  invoicesPage: Paginated<InvoiceRow>;
   initialError: string | null;
+  initialSearch: string;
+  initialStatus: string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<'invoices' | 'salary' | 'reconciliation'>('invoices');
 
+  // Controlled loading / optimistic state
+  const [isLoading, setIsLoading] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState(initialStatus || 'ALL');
+  const [optimisticPage, setOptimisticPage] = useState(invoicesPage.page);
+  const activeStatus = isLoading ? optimisticStatus : (initialStatus || 'ALL');
+  const activePage = isLoading ? optimisticPage : invoicesPage.page;
+
+  // Clear loading when server data arrives
+  useEffect(() => { setIsLoading(false); }, [initialStatus, invoicesPage.page, invoicesPage.items]);
+
+  // Sync when server re-renders
+  useEffect(() => { setOptimisticStatus(initialStatus || 'ALL'); }, [initialStatus]);
+  useEffect(() => { setOptimisticPage(invoicesPage.page); }, [invoicesPage.page]);
+
   // ── Invoices state ──
-  const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoices);
-  const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
+  const { items: invoices, total } = invoicesPage;
   const [error, setError] = useState<string | null>(initialError);
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(initialSearch);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync search when URL-driven prop changes
+  useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   // ── Detail / Edit ──
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
@@ -91,30 +120,22 @@ export function BillingClient({
   const [recon, setRecon] = useState<Record<string, string> | null>(null);
   const [reconLoading, setReconLoading] = useState(false);
 
-  const pageSize = 50;
+  const pageSize = invoicesPage.pageSize || 50;
 
-  const loadInvoices = useCallback(async (overrides?: { status?: string; search?: string; page?: number }) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const p = overrides?.page ?? 1;
-      const params = new URLSearchParams();
-      params.set('page', String(p));
-      params.set('pageSize', String(pageSize));
-      if (overrides?.status && overrides.status !== 'ALL') params.set('status', overrides.status);
-      if (overrides?.search) params.set('search', overrides.search);
+  function navigate(overrides: { status?: string; search?: string; page?: number }) {
+    const s = overrides.search ?? search;
+    const st = overrides.status ?? activeStatus;
+    const p = overrides.page ?? 1;
+    if (overrides.status !== undefined) setOptimisticStatus(st);
+    if (overrides.page !== undefined) setOptimisticPage(p);
+    setIsLoading(true);
+    router.push(buildUrl({ search: s.trim(), status: st, page: p }));
+  }
 
-      const res = await fetch(`/api/proxy/billing/invoices?${params.toString()}`);
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
-      const data = await res.json();
-      setInvoices(data.items);
-      setTotal(data.total);
-    } catch (e) {
-      setError((e as { message?: string }).message ?? 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  function handleSearchSubmit() {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    navigate({ search, page: 1 });
+  }
 
   const loadDetail = async (id: string) => {
     setDetailLoading(true);
@@ -150,7 +171,7 @@ export function BillingClient({
       setComposeOpen(false);
       setComposeSelectedMember(null);
       setComposeForm({ amountAed: 0, vatAed: 0, dueDate: '', description: '' });
-      loadInvoices();
+      router.refresh();
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to create invoice');
     } finally {
@@ -174,7 +195,7 @@ export function BillingClient({
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
       setEditOpen(false);
-      loadInvoices();
+      router.refresh();
       loadDetail(detail.id);
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to update invoice');
@@ -187,7 +208,7 @@ export function BillingClient({
     try {
       const res = await fetch(`/api/proxy/billing/invoices/${id}/void`, { method: 'POST' });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
-      loadInvoices();
+      router.refresh();
       loadDetail(id);
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to void invoice');
@@ -198,7 +219,7 @@ export function BillingClient({
     try {
       const res = await fetch(`/api/proxy/billing/invoices/${id}/write-off`, { method: 'POST' });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
-      loadInvoices();
+      router.refresh();
       loadDetail(id);
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to write off invoice');
@@ -336,8 +357,8 @@ export function BillingClient({
         <>
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); loadInvoices({ status: e.target.value }); }}
+              value={activeStatus}
+              onChange={(e) => navigate({ status: e.target.value, page: 1 })}
               className="bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text"
             >
               {INVOICE_STATUSES.map((s) => (
@@ -351,23 +372,28 @@ export function BillingClient({
                 placeholder="Search member..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') loadInvoices({ search }); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(); }}
               />
             </div>
-            <button onClick={() => { setSearch(''); setStatusFilter('ALL'); loadInvoices({ status: 'ALL', search: '' }); }}
+            <button onClick={() => { setSearch(''); navigate({ status: 'ALL', search: '', page: 1 }); }}
               className="p-2 text-text3 hover:text-text transition-colors" title="Refresh">
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            {loading && invoices.length === 0 ? (
-              <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-text3 animate-spin" /></div>
+          <div
+            className="bg-surface border border-border rounded-lg overflow-hidden"
+            role="region"
+            aria-label="Invoices list"
+            aria-busy={isLoading}
+          >
+            {isLoading && invoices.length === 0 ? (
+              <TableSkeleton cols={5} rows={8} />
             ) : invoices.length === 0 ? (
               <EmptyState icon={Wallet} title="No invoices found" description="Create your first invoice to get started." />
             ) : (
               <>
-                <table className="w-full text-sm">
+                <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
                   <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                     <tr>
                       <th className="text-left px-4 py-3">Member</th>
@@ -399,18 +425,22 @@ export function BillingClient({
                     ))}
                   </tbody>
                 </table>
-                <div className="flex items-center justify-between px-4 py-3 text-xs text-text3 border-t border-border bg-surface2/40">
-                  <span>{total} total</span>
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-2">
-                      <button disabled={page <= 1} onClick={() => { const p = page - 1; setPage(p); loadInvoices({ page: p }); }}
-                        className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2">Prev</button>
-                      <span>Page {page} of {totalPages}</span>
-                      <button disabled={page >= totalPages} onClick={() => { const p = page + 1; setPage(p); loadInvoices({ page: p }); }}
-                        className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2">Next</button>
-                    </div>
-                  )}
-                </div>
+                {!isLoading && (
+                  <div className="flex items-center justify-between px-4 py-3 text-xs text-text3 border-t border-border bg-surface2/40">
+                    <span>{total} total</span>
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button disabled={activePage <= 1 || isLoading}
+                          onClick={() => navigate({ page: activePage - 1 })}
+                          className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2">Prev</button>
+                        <span>Page {activePage} of {totalPages}</span>
+                        <button disabled={activePage >= totalPages || isLoading}
+                          onClick={() => navigate({ page: activePage + 1 })}
+                          className="px-2 py-1 rounded border border-border disabled:opacity-40 hover:bg-surface2">Next</button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>

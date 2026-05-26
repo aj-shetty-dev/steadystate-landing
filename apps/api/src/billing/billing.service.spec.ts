@@ -248,6 +248,94 @@ describe('BillingService.listInvoices()', () => {
   });
 });
 
+describe('BillingService.getWindow', () => {
+  let stub: ReturnType<typeof makeStub>;
+  let svc: BillingService;
+
+  beforeEach(() => {
+    stub = makeStub();
+    svc = new BillingService(stub as never, { send: vi.fn() } as never);
+  });
+
+  it('returns default config when no tenant override exists', async () => {
+    const window = await svc.getWindow('t');
+    expect(window.startDay).toBe(25);
+    expect(window.endDay).toBe(28);
+    expect(window.timezone).toBe('Asia/Dubai');
+  });
+
+  it('returns tenant-specific overrides when set', async () => {
+    stub.salaryWindow.findUnique.mockResolvedValue({
+      tenantId: 't',
+      startDay: 20,
+      endDay: 22,
+      timezone: 'Asia/Muscat',
+      jitterMinutes: 30,
+    });
+    const window = await svc.getWindow('t');
+    expect(window.startDay).toBe(20);
+    expect(window.endDay).toBe(22);
+    expect(window.timezone).toBe('Asia/Muscat');
+  });
+});
+
+describe('BillingService.markInvoiceFailed', () => {
+  let stub: ReturnType<typeof makeStub>;
+  let svc: BillingService;
+
+  beforeEach(() => {
+    stub = makeStub();
+    svc = new BillingService(stub as never, { send: vi.fn() } as never);
+  });
+
+  it('marks an invoice as FAILED', async () => {
+    const inv: InvoiceRow = {
+      id: 'i1', tenantId: 't', memberId: 'm', amountAed: 10000, vatAed: 500,
+      status: InvoiceStatus.DUE, attempts: [],
+      member: { id: 'm', fullName: 'Aisha', phone: '+971501112233', preferredLocale: 'EN' },
+    };
+    stub.invoices.set('i1', inv);
+    stub.invoice.findFirst.mockResolvedValue(inv);
+    await svc.markInvoiceFailed('t', 'i1');
+    expect(inv.status).toBe(InvoiceStatus.FAILED);
+  });
+
+  it('throws NotFound for unknown invoice', async () => {
+    stub.invoice.findFirst.mockResolvedValue(null);
+    await expect(svc.markInvoiceFailed('t', 'ghost')).rejects.toThrow('Invoice not found');
+  });
+});
+
+describe('BillingService.listInvoices with filters', () => {
+  let stub: ReturnType<typeof makeStub>;
+  let svc: BillingService;
+
+  beforeEach(() => {
+    stub = makeStub();
+    svc = new BillingService(stub as never, { send: vi.fn() } as never);
+  });
+
+  it('includes status filter when provided', async () => {
+    stub.invoice.findMany.mockResolvedValue([]);
+    stub.invoice.count.mockResolvedValue(0);
+    await svc.listInvoices('t', 1, 10, undefined, 'DUE');
+    expect(stub.invoice.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: 'DUE' }) }),
+    );
+  });
+
+  it('includes search filter when provided', async () => {
+    stub.invoice.findMany.mockResolvedValue([]);
+    stub.invoice.count.mockResolvedValue(0);
+    await svc.listInvoices('t', 1, 10, undefined, undefined, 'Aisha');
+    expect(stub.invoice.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ member: { fullName: { contains: 'Aisha', mode: 'insensitive' } } }),
+      }),
+    );
+  });
+});
+
 describe('renderBillingReminder', () => {
   it('uses Arabic when locale is AR', () => {
     const out = renderBillingReminder({ firstName: 'Aisha', amountAed: 250, locale: 'AR' });

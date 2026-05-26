@@ -73,6 +73,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   }
 
   const member = memberResult.value;
+  const emergencyContact = member.emergencyContact as { name?: string; phone?: string } | null | undefined;
   const memberships = membershipsResult.status === 'fulfilled' ? membershipsResult.value.items : null;
   const checkins = checkinsResult.status === 'fulfilled' ? checkinsResult.value.slice(0, 10) : null;
   const invoices = invoicesResult.status === 'fulfilled' ? invoicesResult.value.items : null;
@@ -140,6 +141,19 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                 </span>
               )}
             </div>
+            {(emergencyContact || member.assignedTrainerId) && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-text2">
+                {emergencyContact && (emergencyContact.name || emergencyContact.phone) && (
+                  <span>
+                    Emergency: {emergencyContact.name || '—'}
+                    {emergencyContact.phone && <> · {emergencyContact.phone}</>}
+                  </span>
+                )}
+                {member.assignedTrainerId && (
+                  <Badge tone="neutral">Has assigned trainer</Badge>
+                )}
+              </div>
+            )}
           </div>
           <MemberDetailClient member={member} />
         </div>

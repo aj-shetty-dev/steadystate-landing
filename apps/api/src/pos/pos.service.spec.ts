@@ -124,4 +124,89 @@ describe('PosService', () => {
     const s = await svc.create('t1', { type: 'PRODUCT', staffId: 'staff-ok', lines: [{ kind: 'PRODUCT', refId: 'p1', quantity: 1 }] });
     expect(s.staffId).toBe('staff-ok');
   });
+
+  it('creates a MEMBERSHIP_INITIATION sale from a plan ref', async () => {
+    stub.membershipPlan.findFirst.mockResolvedValue({ id: 'plan1', tenantId: 't1', priceAed: 25000, nameEn: 'Gold', active: true });
+    const s = await svc.create('t1', {
+      type: 'MEMBERSHIP_INITIATION',
+      lines: [{ kind: 'MEMBERSHIP', refId: 'plan1', quantity: 1 }],
+    });
+    expect(s.subtotalAed).toBe(25000);
+    expect(s.vatAed).toBe(1250);
+  });
+
+  it('rejects MEMBERSHIP line with unknown plan', async () => {
+    stub.membershipPlan.findFirst.mockResolvedValue(null);
+    await expect(
+      svc.create('t1', { type: 'MEMBERSHIP_INITIATION', lines: [{ kind: 'MEMBERSHIP', refId: 'no-plan', quantity: 1 }] }),
+    ).rejects.toThrow(/Plan.*not available/);
+  });
+
+  it('creates a DROP_IN sale from a class type with drop-in price', async () => {
+    stub.classType.findFirst.mockResolvedValue({ id: 'ct1', tenantId: 't1', dropInPriceAed: 7500, nameEn: 'Yoga' });
+    const s = await svc.create('t1', {
+      type: 'DROP_IN',
+      lines: [{ kind: 'CLASS_DROPIN', refId: 'ct1', quantity: 1 }],
+    });
+    expect(s.subtotalAed).toBe(7500);
+  });
+
+  it('rejects DROP_IN when class has no drop-in price', async () => {
+    stub.classType.findFirst.mockResolvedValue({ id: 'ct1', tenantId: 't1', dropInPriceAed: null, nameEn: 'Free' });
+    await expect(
+      svc.create('t1', { type: 'DROP_IN', lines: [{ kind: 'CLASS_DROPIN', refId: 'ct1', quantity: 1 }] }),
+    ).rejects.toThrow(/no drop-in price/);
+  });
+
+  it('rejects CLASS_DROPIN line without refId', async () => {
+    await expect(
+      svc.create('t1', { type: 'DROP_IN', lines: [{ kind: 'CLASS_DROPIN', quantity: 1 }] }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects sale with empty lines array', async () => {
+    await expect(svc.create('t1', { type: 'PRODUCT', lines: [] })).rejects.toThrow();
+  });
+
+  it('lists sales filtered by member', async () => {
+    stub.sale.findMany.mockResolvedValue([]);
+    await svc.list('t1', { memberId: 'm1' });
+    expect(stub.sale.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ memberId: 'm1' }) }),
+    );
+  });
+
+  it('lists sales filtered by staff and date range', async () => {
+    const from = new Date('2026-01-01');
+    const to = new Date('2026-01-31');
+    stub.sale.findMany.mockResolvedValue([]);
+    await svc.list('t1', { staffId: 'staff-ok', from, to });
+    expect(stub.sale.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ staffId: 'staff-ok' }) }),
+    );
+  });
+
+  it('get() returns a sale with lines', async () => {
+    stub.sale.findFirst.mockResolvedValue({ id: 's1', tenantId: 't1', lines: [] });
+    const s = await svc.get('t1', 's1');
+    expect(s.id).toBe('s1');
+  });
+
+  it('get() throws NotFound for unknown sale', async () => {
+    stub.sale.findFirst.mockResolvedValue(null);
+    await expect(svc.get('t1', 'ghost')).rejects.toThrow('Sale not found');
+  });
+
+  it('dailyTotals aggregates paid sales for a date', async () => {
+    stub.sale.aggregate.mockResolvedValue({ _sum: { subtotalAed: 5000, vatAed: 250, totalAed: 5250 }, _count: { _all: 3 } });
+    const result = await svc.dailyTotals('t1', new Date('2026-05-26'));
+    expect(stub.sale.aggregate).toHaveBeenCalled();
+    expect(result._count._all).toBe(3);
+  });
+
+  it('rejects PRODUCT line without refId', async () => {
+    await expect(
+      svc.create('t1', { type: 'PRODUCT', lines: [{ kind: 'PRODUCT', quantity: 1 }] }),
+    ).rejects.toThrow(/refId/);
+  });
 });

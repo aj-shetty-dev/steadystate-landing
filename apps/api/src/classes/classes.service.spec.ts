@@ -270,6 +270,33 @@ describe('SessionsService', () => {
     expect(notificationsSpy.dispatch).toHaveBeenCalledOnce();
     expect(notificationsSpy.dispatch.mock.calls[0][0]).toMatchObject({ category: 'class_session_cancelled' });
   });
+
+  it('cancel is idempotent on already cancelled session', async () => {
+    const stub = makeStub();
+    stub.types.set('ct1', { id: 'ct1', tenantId: 't1', nameEn: 'Yoga', durationMin: 60, capacity: 10, dropInPriceAed: null, active: true });
+    stub.sessions.set('sc', {
+      id: 'sc', tenantId: 't1', classTypeId: 'ct1', instructorId: null, recurrenceRuleId: null,
+      startsAt: new Date('2099-01-01T06:00:00Z'), endsAt: new Date('2099-01-01T07:00:00Z'),
+      status: ClassSessionStatus.CANCELLED, capacityOverride: null, room: null,
+    });
+    const svc = new SessionsService(stub as unknown as never, makeNotificationsSpy() as unknown as never);
+    const result = await svc.cancel('t1', 'sc');
+    expect(result.status).toBe(ClassSessionStatus.CANCELLED);
+  });
+
+  it('session get returns detail with class type and bookings', async () => {
+    const stub = makeStub();
+    stub.types.set('ct1', { id: 'ct1', tenantId: 't1', nameEn: 'Yoga', durationMin: 60, capacity: 10, dropInPriceAed: null, active: true });
+    stub.sessions.set('sg', {
+      id: 'sg', tenantId: 't1', classTypeId: 'ct1', instructorId: null, recurrenceRuleId: null,
+      startsAt: new Date('2099-01-01T06:00:00Z'), endsAt: new Date('2099-01-01T07:00:00Z'),
+      status: ClassSessionStatus.SCHEDULED, capacityOverride: null, room: 'Studio A',
+    });
+    const svc = new SessionsService(stub as unknown as never, makeNotificationsSpy() as unknown as never);
+    const detail = await svc.get('t1', 'sg');
+    expect(detail.id).toBe('sg');
+    expect(detail.room).toBe('Studio A');
+  });
 });
 
 describe('BookingsService', () => {
@@ -413,6 +440,25 @@ describe('BookingsService', () => {
     await svc.cancel('t1', b1.id);
     expect(notificationsSpy.dispatch).toHaveBeenCalledOnce();
     expect(notificationsSpy.dispatch.mock.calls[0][0]).toMatchObject({ category: 'class_waitlist_promoted' });
+  });
+
+  it('check-in is idempotent on already CHECKED_IN booking', async () => {
+    const b = await svc.book('t1', { sessionId: 's1', memberId: 'm1' });
+    await svc.checkIn('t1', b.id);
+    const again = await svc.checkIn('t1', b.id);
+    expect(again.status).toBe(BookingStatus.CHECKED_IN);
+  });
+
+  it('cancel booking is idempotent on already CANCELLED booking', async () => {
+    const b = await svc.book('t1', { sessionId: 's1', memberId: 'm1' });
+    await svc.cancel('t1', b.id);
+    const again = await svc.cancel('t1', b.id);
+    expect(again.status).toBe(BookingStatus.CANCELLED);
+  });
+
+  it('rejects booking against a COMPLETED session', async () => {
+    stub.sessions.get('s1')!.status = ClassSessionStatus.COMPLETED;
+    await expect(svc.book('t1', { sessionId: 's1', memberId: 'm1' })).rejects.toThrow();
   });
 });
 

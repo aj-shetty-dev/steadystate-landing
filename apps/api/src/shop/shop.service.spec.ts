@@ -156,4 +156,66 @@ describe('ShopService', () => {
     const updated = await service.updateProduct('t1', a.id, { sku: 'A', priceAed: 200 });
     expect((updated as { priceAed: number }).priceAed).toBe(200);
   });
+
+  it('deactivates a product via active: false', async () => {
+    const p = await service.createProduct('t1', { sku: 'DEACT', nameEn: 'Deactivate Me', priceAed: 100, active: true });
+    await service.updateProduct('t1', p.id, { active: false });
+    // Verify product is deactivated by trying to place an order — should reject
+    stub.state.members.set('m1', { id: 'm1', tenantId: 't1' });
+    await expect(
+      service.placeOrder('t1', { memberId: 'm1', lines: [{ productId: p.id, quantity: 1 }] }),
+    ).rejects.toThrow(/unavailable/);
+  });
+
+  it('updates product non-SKU fields (nameEn, description, price)', async () => {
+    const p = await service.createProduct('t1', { sku: 'EDIT', nameEn: 'Original', priceAed: 100 });
+    const updated = await service.updateProduct('t1', p.id, { nameEn: 'Updated', priceAed: 150 });
+    expect((updated as { nameEn: string; priceAed: number }).nameEn).toBe('Updated');
+    expect((updated as { nameEn: string; priceAed: number }).priceAed).toBe(150);
+  });
+
+  it('listProducts with activeOnly=true excludes inactive', async () => {
+    await service.createProduct('t1', { sku: 'ACTIVE', nameEn: 'Active', priceAed: 100, active: true });
+    const inactive = await service.createProduct('t1', { sku: 'INACTIVE', nameEn: 'Inactive', priceAed: 100, active: false });
+    const list = await service.listProducts('t1', true);
+    expect(list.every((p) => p.active)).toBe(true);
+  });
+
+  it('listProducts with activeOnly=false includes all', async () => {
+    await service.createProduct('t1', { sku: 'ACTIVE2', nameEn: 'Active', priceAed: 100, active: true });
+    await service.createProduct('t1', { sku: 'INACTIVE2', nameEn: 'Inactive', priceAed: 100, active: false });
+    const list = await service.listProducts('t1', false);
+    expect(list.some((p) => !p.active)).toBe(true);
+  });
+
+  it('updateProduct throws NotFound for unknown product', async () => {
+    await expect(service.updateProduct('t1', 'ghost', { nameEn: 'X' })).rejects.toThrow('Product not found');
+  });
+
+  it('listOrders returns paginated results', async () => {
+    stub.state.members.set('m1', { id: 'm1', tenantId: 't1' });
+    const p = await service.createProduct('t1', { sku: 'P1', nameEn: 'P1', priceAed: 100 });
+    await service.placeOrder('t1', { memberId: 'm1', lines: [{ productId: p.id, quantity: 1 }] });
+    const result = await service.listOrders('t1', 1, 10);
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(1);
+  });
+
+  it('rejects order with non-existent member', async () => {
+    const p = await service.createProduct('t1', { sku: 'P1', nameEn: 'P1', priceAed: 100 });
+    await expect(
+      service.placeOrder('t1', { memberId: 'no-member', lines: [{ productId: p.id, quantity: 1 }] }),
+    ).rejects.toThrow('Member not found');
+  });
+
+  it('rejects order with no lines', async () => {
+    await expect(
+      service.placeOrder('t1', { memberId: 'm1', lines: [] }),
+    ).rejects.toThrow();
+  });
+
+  it('markOrderPaid throws NotFound for unknown order', async () => {
+    stub.prisma.order.findFirst.mockResolvedValue(null);
+    await expect(service.markOrderPaid('t1', 'ghost')).rejects.toThrow('Order not found');
+  });
 });

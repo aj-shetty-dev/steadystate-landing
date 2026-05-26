@@ -362,6 +362,8 @@ export interface MemberDetail extends MemberRow {
   dateOfBirth: string | null;
   gender: string | null;
   source: string;
+  emergencyContact: unknown;
+  assignedTrainerId: string | null;
 }
 
 export interface CheckinRow {

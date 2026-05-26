@@ -10,10 +10,12 @@ import {
   Search,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ConfirmDialog } from '../../../components/ui/confirm-dialog';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { StatusBadge } from '../../../components/ui/status-badge';
+import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type {
   ClassRecurrenceRow,
   ClassSessionRow,
@@ -94,35 +96,31 @@ export function ClassesClient({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('sessions');
 
+  // Controlled loading / optimistic state
+  const [isLoading, setIsLoading] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState(initialStatus);
+  const [optimisticTypeId, setOptimisticTypeId] = useState(initialTypeId);
+  const [optimisticFrom, setOptimisticFrom] = useState(initialFrom);
+  const [optimisticTo, setOptimisticTo] = useState(initialTo);
+  const activeStatus = isLoading ? optimisticStatus : initialStatus;
+  const activeTypeId = isLoading ? optimisticTypeId : initialTypeId;
+  const activeFrom = isLoading ? optimisticFrom : initialFrom;
+  const activeTo = isLoading ? optimisticTo : initialTo;
+
+  // Clear loading when server data arrives
+  useEffect(() => { setIsLoading(false); }, [initialStatus, initialTypeId, initialFrom, initialTo]);
+
   // Sessions filter state (URL-synced)
-  const [selectedStatus, setSelectedStatus] = useState(initialStatus);
-  const [selectedTypeId, setSelectedTypeId] = useState(initialTypeId);
-  const [fromDate, setFromDate] = useState(initialFrom);
-  const [toDate, setToDate] = useState(initialTo);
   const [typeSearch, setTypeSearch] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync props → state on URL navigation
-  useEffect(() => { setSelectedStatus(initialStatus); }, [initialStatus]);
-  useEffect(() => { setSelectedTypeId(initialTypeId); }, [initialTypeId]);
-  useEffect(() => { setFromDate(initialFrom); }, [initialFrom]);
-  useEffect(() => { setToDate(initialTo); }, [initialTo]);
+  useEffect(() => { setOptimisticStatus(initialStatus); }, [initialStatus]);
+  useEffect(() => { setOptimisticTypeId(initialTypeId); }, [initialTypeId]);
+  useEffect(() => { setOptimisticFrom(initialFrom); }, [initialFrom]);
+  useEffect(() => { setOptimisticTo(initialTo); }, [initialTo]);
   // Cleanup on unmount
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
-
-  const push = useCallback(
-    (overrides: Partial<{ status: string; typeId: string; from: string; to: string }>) => {
-      router.push(
-        buildUrl({
-          status: overrides.status ?? selectedStatus,
-          typeId: overrides.typeId ?? selectedTypeId,
-          from: overrides.from ?? fromDate,
-          to: overrides.to ?? toDate,
-        }),
-      );
-    },
-    [router, selectedStatus, selectedTypeId, fromDate, toDate],
-  );
 
   function applyPreset(days: number) {
     const from = new Date();
@@ -130,13 +128,15 @@ export function ClassesClient({
     const to = new Date(from.getTime() + days * 86400_000);
     const fromStr = from.toISOString().slice(0, 10);
     const toStr = to.toISOString().slice(0, 10);
-    setFromDate(fromStr);
-    setToDate(toStr);
-    push({ from: fromStr, to: toStr });
+    setOptimisticFrom(fromStr);
+    setOptimisticTo(toStr);
+    setIsLoading(true);
+      router.push(buildUrl({ status: activeStatus, typeId: activeTypeId, from: fromStr, to: toStr }));
   }
 
   // Session actions
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuAnchorRect, setMenuAnchorRect] = useState<DOMRect | null>(null);
   const [cancelSessionTarget, setCancelSessionTarget] = useState<ClassSessionRow | null>(null);
   const [cancellingSession, setCancellingSession] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
@@ -296,22 +296,28 @@ export function ClassesClient({
             <div className="flex items-center gap-2 text-sm">
               <input
                 type="date"
-                value={fromDate}
+                value={activeFrom}
                 onChange={(e) => {
-                  setFromDate(e.target.value);
+                  setOptimisticFrom(e.target.value);
                   if (debounceRef.current) clearTimeout(debounceRef.current);
-                  debounceRef.current = setTimeout(() => push({ from: e.target.value }), 400);
+                  debounceRef.current = setTimeout(() => {
+                    setIsLoading(true);
+                    router.push(buildUrl({ status: activeStatus, typeId: activeTypeId, from: e.target.value, to: activeTo }));
+                  }, 400);
                 }}
                 className="rounded-lg border border-border bg-surface2 px-2 py-1.5 text-xs text-text focus:outline-none focus:ring-2 focus:ring-green/40"
               />
               <span className="text-text3">→</span>
               <input
                 type="date"
-                value={toDate}
+                value={activeTo}
                 onChange={(e) => {
-                  setToDate(e.target.value);
+                  setOptimisticTo(e.target.value);
                   if (debounceRef.current) clearTimeout(debounceRef.current);
-                  debounceRef.current = setTimeout(() => push({ to: e.target.value }), 400);
+                  debounceRef.current = setTimeout(() => {
+                    setIsLoading(true);
+                    router.push(buildUrl({ status: activeStatus, typeId: activeTypeId, from: activeFrom, to: e.target.value }));
+                  }, 400);
                 }}
                 className="rounded-lg border border-border bg-surface2 px-2 py-1.5 text-xs text-text focus:outline-none focus:ring-2 focus:ring-green/40"
               />
@@ -322,9 +328,13 @@ export function ClassesClient({
               {SESSION_STATUS_TABS.map((t) => (
                 <button
                   key={t.value}
-                  onClick={() => { setSelectedStatus(t.value); push({ status: t.value }); }}
+                  onClick={() => {
+                    setOptimisticStatus(t.value);
+                    setIsLoading(true);
+                    router.push(buildUrl({ status: t.value, typeId: activeTypeId, from: activeFrom, to: activeTo }));
+                  }}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    selectedStatus === t.value
+                    activeStatus === t.value
                       ? 'bg-green/10 text-green'
                       : 'text-text2 hover:text-text hover:bg-surface2'
                   }`}
@@ -337,8 +347,12 @@ export function ClassesClient({
             {/* Class type filter */}
             {types.filter((t) => t.active).length > 0 && (
               <select
-                value={selectedTypeId}
-                onChange={(e) => { setSelectedTypeId(e.target.value); push({ typeId: e.target.value }); }}
+                value={activeTypeId}
+                onChange={(e) => {
+                  setOptimisticTypeId(e.target.value);
+                  setIsLoading(true);
+                  router.push(buildUrl({ status: activeStatus, typeId: e.target.value, from: activeFrom, to: activeTo }));
+                }}
                 className="rounded-lg border border-border bg-surface2 px-3 py-1.5 text-xs text-text focus:outline-none focus:ring-2 focus:ring-green/40"
               >
                 <option value="">All class types</option>
@@ -350,15 +364,22 @@ export function ClassesClient({
           </div>
 
           {/* Sessions table */}
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            {sessions.length === 0 ? (
+          <div
+            className="bg-surface border border-border rounded-lg overflow-hidden"
+            role="region"
+            aria-label="Sessions list"
+            aria-busy={isLoading}
+          >
+            {isLoading && sessions.length === 0 ? (
+              <TableSkeleton cols={7} rows={6} />
+            ) : sessions.length === 0 ? (
               <EmptyState
                 icon={CalendarDays}
                 title="No sessions found"
                 description="Try adjusting the date range or filters, or create a new session."
               />
             ) : (
-              <table className="w-full text-sm">
+              <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
                 <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3">When</th>
@@ -404,15 +425,21 @@ export function ClassesClient({
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="relative flex justify-end">
                           <button
-                            onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}
+                            onClick={(e) => {
+                              setMenuAnchorRect(e.currentTarget.getBoundingClientRect());
+                              setOpenMenuId(openMenuId === s.id ? null : s.id);
+                            }}
                             className="p-1.5 rounded-md hover:bg-surface2 text-text3 hover:text-text transition-colors"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
-                          {openMenuId === s.id && (
+                          {openMenuId === s.id && menuAnchorRect && createPortal(
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                              <div className="absolute right-0 top-8 z-20 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1">
+                              <div
+                                className="fixed z-20 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1"
+                                style={{ top: menuAnchorRect.bottom + 4, right: window.innerWidth - menuAnchorRect.right }}
+                              >
                                 <button
                                   className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
                                   onClick={() => { setOpenMenuId(null); setDetailSession(s); }}
@@ -431,7 +458,8 @@ export function ClassesClient({
                                   </>
                                 )}
                               </div>
-                            </>
+                            </>,
+                            document.body
                           )}
                         </div>
                       </td>
@@ -520,15 +548,21 @@ export function ClassesClient({
                       <td className="px-4 py-3">
                         <div className="relative flex justify-end">
                           <button
-                            onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}
+                            onClick={(e) => {
+                              setMenuAnchorRect(e.currentTarget.getBoundingClientRect());
+                              setOpenMenuId(openMenuId === t.id ? null : t.id);
+                            }}
                             className="p-1.5 rounded-md hover:bg-surface2 text-text3 hover:text-text transition-colors"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
-                          {openMenuId === t.id && (
+                          {openMenuId === t.id && menuAnchorRect && createPortal(
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                              <div className="absolute right-0 top-8 z-20 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1">
+                              <div
+                                className="fixed z-20 min-w-[140px] rounded-lg border border-border bg-surface shadow-lg py-1"
+                                style={{ top: menuAnchorRect.bottom + 4, right: window.innerWidth - menuAnchorRect.right }}
+                              >
                                 <button
                                   className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
                                   onClick={() => { setOpenMenuId(null); setEditingType(t); setShowTypeForm(true); }}
@@ -547,7 +581,8 @@ export function ClassesClient({
                                   </>
                                 )}
                               </div>
-                            </>
+                            </>,
+                            document.body
                           )}
                         </div>
                       </td>

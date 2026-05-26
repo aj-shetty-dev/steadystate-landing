@@ -3,8 +3,10 @@
 import { MoreHorizontal, Pencil, Upload, UserX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ConfirmDialog } from '../../../components/ui/confirm-dialog';
 import { PageHeader } from '../../../components/ui/page-header';
+import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import type { MemberRow, Paginated } from '../../../lib/api';
 import { CsvImportModal } from './csv-import-modal';
@@ -70,7 +72,7 @@ function RowActionsMenu({
         <MoreHorizontal className="w-4 h-4" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
@@ -95,7 +97,8 @@ function RowActionsMenu({
               </button>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );
@@ -110,28 +113,47 @@ interface Props {
 export function MembersClient({ data, initialSearch, initialStatus }: Props) {
   const router = useRouter();
 
+  // ── Controlled loading / optimistic state ──
+  const [isLoading, setIsLoading] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState(initialStatus);
+  const [optimisticPage, setOptimisticPage] = useState(data.page);
+  const [optimisticCancelled, setOptimisticCancelled] = useState<Set<string>>(new Set());
+  const activeStatus = isLoading ? optimisticStatus : initialStatus;
+  const activePage = isLoading ? optimisticPage : data.page;
+
+  // Clear loading when server data arrives
+  useEffect(() => { setIsLoading(false); }, [initialStatus, data.page, data.items]);
+
   // Local search value drives the input; a debounced effect pushes it to the URL.
   const [search, setSearch] = useState(initialSearch);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevSearchRef = useRef(initialSearch);
 
-  // Sync when the server re-renders with new URL params (e.g. tab click resets search)
+  // Sync when the server re-renders with new URL params
   useEffect(() => { setSearch(initialSearch); }, [initialSearch]);
 
   useEffect(() => {
+    if (search === prevSearchRef.current) return;
+    prevSearchRef.current = search;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      const next = buildUrl({ search: search.trim(), status: initialStatus, page: 1 });
-      router.push(next);
+      setIsLoading(true);
+      router.push(buildUrl({ search: search.trim(), status: activeStatus, page: 1 }));
     }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   function handleStatus(status: string) {
+    setOptimisticStatus(status);
+    setOptimisticPage(1);
+    setIsLoading(true);
     router.push(buildUrl({ search: search.trim(), status, page: 1 }));
   }
 
   function handlePage(page: number) {
+    setOptimisticPage(page);
+    setIsLoading(true);
     router.push(buildUrl({ search: search.trim(), status: initialStatus, page }));
   }
 
@@ -146,10 +168,17 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
   async function handleDeactivate(m: MemberRow) {
     if (m.membershipStatus === 'CANCELLED') return;
     setDeactivating(m.id);
+    setOptimisticCancelled((prev) => new Set(prev).add(m.id));
     try {
       const res = await fetch(`/api/proxy/members/${m.id}/deactivate`, { method: 'PATCH' });
       if (!res.ok) throw new Error('Failed to deactivate');
       router.refresh();
+    } catch {
+      setOptimisticCancelled((prev) => {
+        const next = new Set(prev);
+        next.delete(m.id);
+        return next;
+      });
     } finally {
       setDeactivating(null);
     }
@@ -186,8 +215,8 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
           <button
             key={tab.key}
             onClick={() => handleStatus(tab.key)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
-              initialStatus === tab.key
+            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-all duration-200 whitespace-nowrap ${
+              activeStatus === tab.key
                 ? 'border-green text-green'
                 : 'border-transparent text-text3 hover:text-text2'
             }`}
@@ -208,8 +237,15 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
         />
       </div>
 
-      <div className="bg-surface border border-border rounded-lg overflow-hidden">
-        {data.items.length === 0 ? (
+      <div
+        className="bg-surface border border-border rounded-lg overflow-hidden"
+        role="region"
+        aria-label="Members list"
+        aria-busy={isLoading}
+      >
+        {isLoading && data.items.length === 0 ? (
+          <TableSkeleton cols={8} rows={8} />
+        ) : data.items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
             <p className="text-text2 text-sm">
               {search ? `No members match "${search}"` : 'Import a CSV or add a member manually to get started.'}
@@ -227,86 +263,95 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
             )}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
-              <tr>
-                <th className="text-left px-4 py-3">Name</th>
-                <th className="text-left px-4 py-3">Phone</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3">Plan</th>
-                <th className="text-left px-4 py-3">Provider</th>
-                <th className="text-left px-4 py-3">Last check-in</th>
-                <th className="text-left px-4 py-3">Joined</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((m) => (
-                <tr
-                  key={m.id}
-                  className="border-t border-border hover:bg-surface2/60 transition-colors"
-                >
-                  <td
-                    onClick={() => router.push(`/members/${m.id}`)}
-                    className="px-4 py-3 text-green font-medium cursor-pointer"
-                  >
-                    {m.fullName}
-                  </td>
-                  <td className="px-4 py-3 text-text2 tabular-nums">{m.phone ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={m.membershipStatus} />
-                  </td>
-                  <td className="px-4 py-3 text-text2">
-                    {m.activePlanNames.length > 0
-                      ? m.activePlanNames.join(', ')
-                      : <span className="text-text3">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-text2 capitalize">{m.provider.toLowerCase()}</td>
-                  <td className="px-4 py-3 text-text2 tabular-nums">{fmt(m.lastCheckinAt)}</td>
-                  <td className="px-4 py-3 text-text2 tabular-nums">{fmt(m.joinedAt)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <RowActionsMenu
-                      member={m}
-                      onEdit={() => setEditMember(m)}
-                      onDeactivate={() => setConfirmTarget(m)}
-                      deactivating={deactivating === m.id}
-                    />
-                  </td>
+          <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50' : 'animate-fade-in'}`}>
+            <table className="w-full text-sm">
+              <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                <tr>
+                  <th className="text-left px-4 py-3">Name</th>
+                  <th className="text-left px-4 py-3">Phone</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                  <th className="text-left px-4 py-3">Plan</th>
+                  <th className="text-left px-4 py-3">Provider</th>
+                  <th className="text-left px-4 py-3">Last check-in</th>
+                  <th className="text-left px-4 py-3">Joined</th>
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.items.map((m) => {
+                  const isCancelled = optimisticCancelled.has(m.id);
+                  return (
+                    <tr
+                      key={m.id}
+                      className={`border-t border-border transition-all duration-300 ${
+                        isCancelled ? 'opacity-40 pointer-events-none' : 'hover:bg-surface2/60'
+                      }`}
+                    >
+                      <td
+                        onClick={() => router.push(`/members/${m.id}`)}
+                        className="px-4 py-3 text-green font-medium cursor-pointer"
+                      >
+                        {m.fullName}
+                      </td>
+                      <td className="px-4 py-3 text-text2 tabular-nums">{m.phone ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={m.membershipStatus} />
+                      </td>
+                      <td className="px-4 py-3 text-text2">
+                        {m.activePlanNames.length > 0
+                          ? m.activePlanNames.join(', ')
+                          : <span className="text-text3">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-text2 capitalize">{m.provider.toLowerCase()}</td>
+                      <td className="px-4 py-3 text-text2 tabular-nums">{fmt(m.lastCheckinAt)}</td>
+                      <td className="px-4 py-3 text-text2 tabular-nums">{fmt(m.joinedAt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <RowActionsMenu
+                          member={m}
+                          onEdit={() => setEditMember(m)}
+                          onDeactivate={() => setConfirmTarget(m)}
+                          deactivating={deactivating === m.id}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {/* Footer: count + pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface2/40">
-          <p className="text-xs text-text3 tabular-nums">
-            {data.total === 0
-              ? 'No members'
-              : `${(data.page - 1) * data.pageSize + 1}–${Math.min(data.page * data.pageSize, data.total)} of ${data.total} members`}
-          </p>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePage(data.page - 1)}
-                disabled={data.page <= 1}
-                className="rounded-md border border-border px-3 py-1 text-xs text-text2 hover:bg-surface2 disabled:opacity-40 transition-colors"
-              >
-                ← Prev
-              </button>
-              <span className="text-xs text-text3 tabular-nums">
-                {data.page} / {totalPages}
-              </span>
-              <button
-                onClick={() => handlePage(data.page + 1)}
-                disabled={data.page >= totalPages}
-                className="rounded-md border border-border px-3 py-1 text-xs text-text2 hover:bg-surface2 disabled:opacity-40 transition-colors"
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </div>
+        {!isLoading && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface2/40">
+            <p className="text-xs text-text3 tabular-nums">
+              {data.total === 0
+                ? 'No members'
+                : `${(data.page - 1) * data.pageSize + 1}–${Math.min(data.page * data.pageSize, data.total)} of ${data.total} members`}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePage(activePage - 1)}
+                  disabled={activePage <= 1 || isLoading}
+                  className="rounded-md border border-border px-3 py-1 text-xs text-text2 hover:bg-surface2 disabled:opacity-40 transition-colors"
+                >
+                  ← Prev
+                </button>
+                <span className="text-xs text-text3 tabular-nums">
+                  {activePage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => handlePage(activePage + 1)}
+                  disabled={activePage >= totalPages || isLoading}
+                  className="rounded-md border border-border px-3 py-1 text-xs text-text2 hover:bg-surface2 disabled:opacity-40 transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
