@@ -1,0 +1,948 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  OWNER
+  STAFF
+  SUPER_ADMIN
+}
+
+enum Locale {
+  EN
+  AR
+}
+
+enum InvoiceStatus {
+  DUE
+  PAID
+  FAILED
+  RETRY_SCHEDULED
+  WRITTEN_OFF
+}
+
+enum PaymentAttemptOutcome {
+  PENDING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum DoorEventDirection {
+  IN
+  OUT
+}
+
+enum DoorSignalKind {
+  AFTER_HOURS_ENTRY
+  MISSED_CHECKIN_AFTER_ENTRY
+  TAILGATE_SUSPECTED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  PAUSED
+  FROZEN
+  CANCELLED
+  PENDING
+  PENDING_PAYMENT
+}
+
+enum CrmProvider {
+  NATIVE
+  MINDBODY
+  GLOFOX
+  ZENOTI
+  VIRTUAGYM
+  GYMMASTER
+  SIMPLE_LOGIC
+  ELEWIX
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  UNSPECIFIED
+}
+
+enum MemberSource {
+  MANUAL
+  CRM_IMPORT
+  LEAD_CONVERSION
+  WEB_SIGNUP
+  KIOSK_SIGNUP
+}
+
+enum StaffRole {
+  TRAINER
+  RECEPTION
+  MANAGER
+  CLEANER
+  OTHER
+}
+
+enum ClassSessionStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum BookingStatus {
+  BOOKED
+  WAITLISTED
+  CHECKED_IN
+  NO_SHOW
+  CANCELLED
+}
+
+enum LeadSource {
+  WALK_IN
+  REFERRAL
+  INSTAGRAM
+  FACEBOOK
+  GOOGLE
+  WEBSITE
+  WHATSAPP
+  OTHER
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  TRIAL_BOOKED
+  TRIAL_COMPLETED
+  CONVERTED
+  LOST
+}
+
+enum LeadActivityType {
+  CALL
+  WHATSAPP
+  EMAIL
+  VISIT
+  NOTE
+  STAGE_CHANGE
+}
+
+enum CheckInSource {
+  KIOSK_PIN
+  KIOSK_QR
+  DOOR_EVENT
+  MANUAL
+  MOBILE_QR
+}
+
+enum SaleType {
+  DROP_IN
+  PRODUCT
+  DAY_PASS
+  MEMBERSHIP_INITIATION
+  MIXED
+}
+
+enum SaleLineKind {
+  PRODUCT
+  CLASS_DROPIN
+  MEMBERSHIP
+  DAY_PASS
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+  FAILED
+}
+
+enum FreezeStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CrmConnectionStatus {
+  PENDING
+  CONNECTED
+  SYNCING
+  ERROR
+  DISCONNECTED
+}
+
+enum WhatsappMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  UNDELIVERED
+}
+
+enum ChurnSignalStatus {
+  PENDING
+  NUDGED
+  DISMISSED
+  FAILED
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  country   String   @default("AE")
+  city      String   @default("Dubai")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  members         Member[]
+  crmConnections  CrmConnection[]
+  whatsappMessages WhatsappMessage[]
+  churnSignals    ChurnSignal[]
+  invoices        Invoice[]
+  paymentAttempts PaymentAttempt[]
+  salaryWindow    SalaryWindow?
+  products        Product[]
+  orders          Order[]
+  doorEvents      DoorEvent[]
+  doorSignals     DoorSignal[]
+  subscription    Subscription?
+  staff           Staff[]
+  shifts          Shift[]
+  membershipPlans MembershipPlan[]
+  memberships     Membership[]
+  membershipFreezes MembershipFreeze[]
+  classTypes      ClassType[]
+  classSessions   ClassSession[]
+  classRecurrences ClassRecurrence[]
+  bookings        Booking[]
+  leads           Lead[]
+  leadActivities  LeadActivity[]
+  checkIns        CheckIn[]
+  sales           Sale[]
+  saleLines       SaleLine[]
+  stripeCustomers StripeCustomer[]
+  memberQrTokens  MemberQrToken[]
+  auditLogs       AuditLog[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  email        String   @unique
+  passwordHash String?
+  clerkId      String?  @unique
+  fullName     String
+  role         UserRole @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff  Staff?
+  assignedLeads Lead[]            @relation("LeadAssignedUser")
+  leadActivities LeadActivity[]
+  freezesApproved MembershipFreeze[] @relation("FreezeApprovedBy")
+  auditLogs    AuditLog[]
+
+  @@index([tenantId])
+}
+
+model CrmConnection {
+  id          String              @id @default(uuid())
+  tenantId    String
+  provider    CrmProvider
+  status      CrmConnectionStatus @default(PENDING)
+  credentials Json
+  lastSyncAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
+}
+
+model Member {
+  id                    String           @id @default(uuid())
+  tenantId              String
+  externalId            String
+  provider              CrmProvider      @default(NATIVE)
+  clerkId               String?          @unique
+  fullName              String
+  email                 String?
+  phone                 String?
+  membershipStatus      MembershipStatus
+  membershipExpiresAt   DateTime?
+  lastCheckinAt         DateTime?
+  joinedAt              DateTime
+  preferredLocale       Locale           @default(EN)
+  dateOfBirth           DateTime?
+  gender                Gender?
+  emergencyContact      Json?
+  medicalNotes          String?
+  source                MemberSource     @default(MANUAL)
+  assignedTrainerId     String?
+  notificationPrefs     Json?
+  raw                   Json
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedTrainer  Staff?            @relation("MemberAssignedTrainer", fields: [assignedTrainerId], references: [id], onDelete: SetNull)
+  churnSignals     ChurnSignal[]
+  invoices         Invoice[]
+  orders           Order[]
+  doorEvents       DoorEvent[]
+  doorSignals      DoorSignal[]
+  memberships      Membership[]
+  bookings         Booking[]
+  checkIns         CheckIn[]
+  sales            Sale[]
+  qrToken          MemberQrToken?
+  stripeCustomer   StripeCustomer?
+  convertedFromLead Lead?            @relation("LeadConvertedMember")
+
+  @@unique([tenantId, provider, externalId])
+  @@index([tenantId])
+  @@index([tenantId, membershipStatus])
+  @@index([tenantId, membershipStatus, lastCheckinAt])
+  @@index([tenantId, assignedTrainerId])
+}
+
+model WhatsappMessage {
+  id             String                @id @default(uuid())
+  tenantId       String
+  to             String
+  body           String
+  templateName   String?
+  status         WhatsappMessageStatus @default(QUEUED)
+  providerMessageId String?
+  errorCode      String?
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model ChurnSignal {
+  id                    String            @id @default(uuid())
+  tenantId              String
+  memberId              String
+  detectedAt            DateTime          @default(now())
+  daysSinceLastCheckin  Int
+  status                ChurnSignalStatus @default(PENDING)
+  nudgedAt              DateTime?
+  whatsappMessageId     String?
+  errorMessage          String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, memberId, detectedAt])
+}
+
+model SalaryWindow {
+  id            String   @id @default(uuid())
+  tenantId      String   @unique
+  startDay      Int      @default(25)
+  endDay        Int      @default(28)
+  timezone      String   @default("Asia/Dubai")
+  jitterMinutes Int      @default(120)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id           String        @id @default(uuid())
+  tenantId     String
+  memberId     String
+  amountAed    Int
+  vatAed       Int           @default(0)
+  currency     String        @default("AED")
+  dueDate      DateTime
+  status       InvoiceStatus @default(DUE)
+  externalRef  String?
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member   Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  attempts PaymentAttempt[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+}
+
+model PaymentAttempt {
+  id               String                @id @default(uuid())
+  tenantId         String
+  invoiceId        String
+  attemptedAt      DateTime?
+  scheduledFor     DateTime
+  outcome          PaymentAttemptOutcome @default(PENDING)
+  providerResponse Json?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, outcome])
+  @@index([tenantId, scheduledFor])
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  tenantId      String
+  sku           String
+  nameEn        String
+  nameAr        String?
+  descriptionEn String?
+  descriptionAr String?
+  priceAed      Int
+  vatRate       Int      @default(5)
+  imageUrl      String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines  OrderLine[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@index([tenantId, active])
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  tenantId  String
+  memberId  String
+  status    OrderStatus @default(PENDING)
+  subtotalAed Int
+  vatAed    Int
+  totalAed  Int
+  currency  String      @default("AED")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  lines  OrderLine[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, memberId])
+}
+
+model OrderLine {
+  id           String @id @default(uuid())
+  orderId      String
+  productId    String
+  quantity     Int
+  unitPriceAed Int
+  vatAed       Int
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+model DoorEvent {
+  id          String             @id @default(uuid())
+  tenantId    String
+  memberId    String?
+  externalRef String?
+  source      String
+  direction   DoorEventDirection
+  occurredAt  DateTime
+  raw         Json?
+  createdAt   DateTime           @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, occurredAt])
+  @@index([tenantId, memberId, occurredAt])
+}
+
+model DoorSignal {
+  id         String         @id @default(uuid())
+  tenantId   String
+  memberId   String?
+  kind       DoorSignalKind
+  detectedAt DateTime       @default(now())
+  detail     String?
+  raw        Json?
+  createdAt  DateTime       @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, kind])
+  @@index([tenantId, memberId, detectedAt])
+}
+
+model Subscription {
+  id           String             @id @default(uuid())
+  tenantId     String             @unique
+  plan         SubscriptionPlan   @default(STARTER)
+  status       SubscriptionStatus @default(TRIALING)
+  trialEndsAt  DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  externalRef         String?
+  provider            String?
+  stripeCustomerId    String?
+  stripeSubscriptionId String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 8 — Native CRM models
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Staff {
+  id                String     @id @default(uuid())
+  tenantId          String
+  userId            String?    @unique
+  fullName          String
+  role              StaffRole  @default(TRAINER)
+  email             String?
+  phone             String?
+  hourlyRateAed     Int?
+  commissionPercent Int?
+  hiredAt           DateTime   @default(now())
+  terminatedAt      DateTime?
+  color             String     @default("#22c55e")
+  pinHash           String?
+  active            Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shifts            Shift[]
+  classSessions     ClassSession[]
+  assignedMembers   Member[]       @relation("MemberAssignedTrainer")
+  checkIns          CheckIn[]
+  sales             Sale[]
+
+  @@index([tenantId])
+  @@index([tenantId, role])
+  @@index([tenantId, active])
+}
+
+model Shift {
+  id        String    @id @default(uuid())
+  tenantId  String
+  staffId   String
+  startsAt  DateTime
+  endsAt    DateTime
+  role      StaffRole?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, staffId, startsAt])
+  @@index([tenantId, startsAt])
+}
+
+model MembershipPlan {
+  id              String   @id @default(uuid())
+  tenantId        String
+  nameEn          String
+  nameAr          String?
+  description     String?
+  durationDays    Int
+  priceAed        Int
+  vatRate         Int      @default(5)
+  includesClasses Boolean  @default(false)
+  maxFreezeDays   Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@index([tenantId])
+  @@index([tenantId, active])
+}
+
+model Membership {
+  id                   String           @id @default(uuid())
+  tenantId             String
+  memberId             String
+  planId               String
+  startDate            DateTime
+  endDate              DateTime
+  status               MembershipStatus @default(PENDING_PAYMENT)
+  frozenUntil          DateTime?
+  cancellationReason   String?
+  cancelAtPeriodEnd    Boolean          @default(false)
+  signedAt             DateTime?
+  signatureData        Json?
+  lastReminderSentAt   DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member  Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan    MembershipPlan     @relation(fields: [planId], references: [id])
+  freezes MembershipFreeze[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, memberId, status])
+  @@index([tenantId, endDate])
+}
+
+model MembershipFreeze {
+  id                String       @id @default(uuid())
+  tenantId          String
+  membershipId      String
+  startDate         DateTime
+  endDate           DateTime
+  daysUsed          Int
+  reason            String?
+  status            FreezeStatus @default(ACTIVE)
+  approvedByUserId  String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership   Membership  @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  approvedBy   User?       @relation("FreezeApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, membershipId])
+  @@index([tenantId, status, endDate])
+}
+
+model ClassType {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  nameEn             String
+  nameAr             String?
+  description        String?
+  durationMin        Int
+  capacity           Int
+  color              String   @default("#22c55e")
+  requiresEquipment  Boolean  @default(false)
+  dropInPriceAed     Int?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions     ClassSession[]
+  recurrences  ClassRecurrence[]
+
+  @@index([tenantId])
+  @@index([tenantId, active])
+}
+
+model ClassRecurrence {
+  id                String   @id @default(uuid())
+  tenantId          String
+  classTypeId       String
+  instructorId      String?
+  daysOfWeek        Int[]
+  startTime         String
+  durationMin       Int
+  room              String?
+  validFrom         DateTime
+  validUntil        DateTime?
+  generatedThrough  DateTime?
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classType  ClassType      @relation(fields: [classTypeId], references: [id], onDelete: Cascade)
+  sessions   ClassSession[]
+
+  @@index([tenantId])
+  @@index([tenantId, active])
+}
+
+model ClassSession {
+  id                String             @id @default(uuid())
+  tenantId          String
+  classTypeId       String
+  instructorId      String?
+  recurrenceRuleId  String?
+  startsAt          DateTime
+  endsAt            DateTime
+  room              String?
+  status            ClassSessionStatus @default(SCHEDULED)
+  capacityOverride  Int?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classType   ClassType         @relation(fields: [classTypeId], references: [id], onDelete: Cascade)
+  instructor  Staff?            @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  recurrence  ClassRecurrence?  @relation(fields: [recurrenceRuleId], references: [id], onDelete: SetNull)
+  bookings    Booking[]
+  checkIns    CheckIn[]
+
+  @@unique([recurrenceRuleId, startsAt])
+  @@index([tenantId])
+  @@index([tenantId, startsAt])
+  @@index([tenantId, status, startsAt])
+  @@index([tenantId, instructorId, startsAt])
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  tenantId     String
+  sessionId    String
+  memberId     String
+  status       BookingStatus @default(BOOKED)
+  bookedAt     DateTime      @default(now())
+  checkedInAt  DateTime?
+  cancelledAt  DateTime?
+  position     Int?
+  saleLineId   String?       @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  member  Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  saleLine SaleLine?   @relation(fields: [saleLineId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, memberId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, memberId, status])
+}
+
+model Lead {
+  id                  String     @id @default(uuid())
+  tenantId            String
+  fullName            String
+  phone               String
+  email               String?
+  source              LeadSource @default(WALK_IN)
+  stage               LeadStage  @default(NEW)
+  assignedToUserId    String?
+  nextFollowUpAt      DateTime?
+  notes               String?
+  convertedMemberId   String?    @unique
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedTo       User?          @relation("LeadAssignedUser", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  convertedMember  Member?        @relation("LeadConvertedMember", fields: [convertedMemberId], references: [id], onDelete: SetNull)
+  activities       LeadActivity[]
+
+  @@index([tenantId])
+  @@index([tenantId, stage])
+  @@index([tenantId, assignedToUserId, stage])
+  @@index([tenantId, nextFollowUpAt])
+}
+
+model LeadActivity {
+  id              String           @id @default(uuid())
+  tenantId        String
+  leadId          String
+  type            LeadActivityType
+  summary         String
+  createdByUserId String?
+  createdAt       DateTime         @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead      Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([leadId, createdAt])
+}
+
+model CheckIn {
+  id           String        @id @default(uuid())
+  tenantId     String
+  memberId     String
+  source       CheckInSource
+  checkedInAt  DateTime      @default(now())
+  staffId      String?
+  sessionId    String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member  Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  staff   Staff?        @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  session ClassSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([tenantId, memberId, checkedInAt])
+  @@index([tenantId, checkedInAt])
+  @@index([tenantId, sessionId])
+}
+
+model Sale {
+  id                    String        @id @default(uuid())
+  tenantId              String
+  type                  SaleType
+  memberId              String?
+  leadId                String?
+  staffId               String?
+  subtotalAed           Int
+  vatAed                Int
+  totalAed              Int
+  currency              String        @default("AED")
+  paymentStatus         PaymentStatus @default(PENDING)
+  stripePaymentIntentId String?       @unique
+  refundedAed           Int           @default(0)
+  notes                 String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member?    @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  staff  Staff?     @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  lines  SaleLine[]
+
+  @@index([tenantId])
+  @@index([tenantId, paymentStatus])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, staffId, createdAt])
+}
+
+model SaleLine {
+  id            String       @id @default(uuid())
+  tenantId      String
+  saleId        String
+  kind          SaleLineKind
+  refId         String?
+  nameSnapshot  String
+  quantity      Int          @default(1)
+  unitPriceAed  Int
+  vatRate       Int          @default(5)
+  vatAed        Int
+  totalAed      Int
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  booking Booking?
+
+  @@index([saleId])
+  @@index([tenantId, kind])
+}
+
+model StripeCustomer {
+  id               String   @id @default(uuid())
+  tenantId         String
+  memberId         String   @unique
+  stripeCustomerId String   @unique
+  createdAt        DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model StripeEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  type        String
+  processedAt DateTime @default(now())
+  payload     Json?
+
+  @@index([type])
+}
+
+model MemberQrToken {
+  id        String   @id @default(uuid())
+  tenantId  String
+  memberId  String   @unique
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String
+  userId       String?
+  action       String
+  resourceType String
+  resourceId   String?
+  diff         Json?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, resourceType, resourceId])
+}

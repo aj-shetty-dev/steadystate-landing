@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Dark theme (default) ─── */
+:root {
+  --color-bg:      8 8 8;
+  --color-surface: 15 15 15;
+  --color-surface2:22 22 22;
+  --color-border:  36 36 36;
+  --color-green:   0 232 122;
+  --color-text:    242 240 234;
+  --color-text2:   154 152 144;
+  --color-text3:   90 88 86;
+  --color-error:   248 113 113;   /* red-400 */
+  --color-warning: 250 204 21;    /* yellow-400 */
+}
+
+/* ─── Light theme ─── */
+[data-theme="light"] {
+  --color-bg:      247 246 245;
+  --color-surface: 255 255 255;
+  --color-surface2:242 241 239;
+  --color-border:  229 227 224;
+  --color-green:   0 140 80;      /* #008C50 — 4.5 : 1 on white */
+  --color-text:    28 25 23;
+  --color-text2:   107 104 99;
+  --color-text3:   160 157 153;
+  --color-error:   220 38 38;     /* red-600 */
+  --color-warning: 217 119 6;     /* amber-600 */
+}
+
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
+  font-feature-settings: 'cv11', 'ss01', 'ss03', 'cv02';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Skeleton shimmer ─── */
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--color-surface2)) 25%,
+    rgb(var(--color-border))   50%,
+    rgb(var(--color-surface2)) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
