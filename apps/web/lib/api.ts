@@ -1,6 +1,4 @@
-import { getAccessToken } from './session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_URL = '';
 
 export class ApiError extends Error {
   status: number;
@@ -40,19 +38,18 @@ async function apiFetchOnce<T>(
   revalidate: number | undefined,
   allowRetry: boolean,
 ): Promise<T> {
-  const token = await getAccessToken();
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const cacheInit: RequestInit & { next?: { revalidate: number } } =
     revalidate !== undefined ? { next: { revalidate } } : { cache: 'no-store' };
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api/v1${path}`, {
+    res = await fetch(`${API_URL}/api${path}`, {
       ...init,
       headers,
+      credentials: 'include',
       ...cacheInit,
     });
   } catch (err) {

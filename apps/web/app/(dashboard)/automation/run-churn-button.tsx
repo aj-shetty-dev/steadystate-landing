@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { apiFetch } from '../../../lib/api';
+
 interface Result {
   detection: { membersScanned: number; signalsCreated: number; signalsSkipped: number };
   dispatch: { pending: number; sent: number; skipped: number; failed: number; suppressed: boolean };
@@ -19,13 +21,7 @@ export function RunChurnButton() {
     setResult(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/proxy/automation/run', { method: 'POST' });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        setError(body.message ?? 'Run failed');
-        return;
-      }
-      setResult((await res.json()) as Result);
+      await apiFetch<Result>('/automation/run', { method: 'POST' });
       router.refresh();
     } finally {
       setLoading(false);

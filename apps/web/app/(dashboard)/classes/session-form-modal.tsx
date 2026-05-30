@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { ClassTypeRow, StaffRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 interface Props {
   types: ClassTypeRow[];
@@ -45,15 +46,11 @@ export function SessionFormModal({ types, staff, onClose }: Props) {
       ...(form.capacityOverride ? { capacityOverride: Number(form.capacityOverride) } : {}),
     };
     try {
-      const res = await fetch('/api/proxy/classes/sessions', {
+      await apiFetch('/classes/sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       router.refresh();
       onClose();
     } catch (err) {

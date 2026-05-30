@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import type { ClassBookingRow, ClassSessionRow, MemberRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -52,9 +53,8 @@ export function SessionDetailModal({ session, onClose, onCancelSession, cancelli
   const fillPct = capacity > 0 ? Math.round((activeBookingsCount / capacity) * 100) : 0;
 
   useEffect(() => {
-    fetch(`/api/proxy/classes/bookings?sessionId=${session.id}`)
-      .then((r) => r.json())
-      .then((data: ClassBookingRow[]) => setBookings(data))
+    apiFetch<ClassBookingRow[]>(`/classes/bookings?sessionId=${session.id}`)
+      .then((data) => setBookings(data))
       .catch(() => setLoadError('Failed to load bookings'));
   }, [session.id]);
 
@@ -64,9 +64,8 @@ export function SessionDetailModal({ session, onClose, onCancelSession, cancelli
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
     if (memberSearch.trim().length < 2) { setMemberResults([]); return; }
     searchDebounce.current = setTimeout(() => {
-      fetch(`/api/proxy/members?search=${encodeURIComponent(memberSearch)}&pageSize=20`)
-        .then((r) => r.json())
-        .then((d: MembersPage | MemberRow[]) => {
+      apiFetch<MembersPage | MemberRow[]>(`/members?search=${encodeURIComponent(memberSearch)}&pageSize=20`)
+        .then((d) => {
           setMemberResults(Array.isArray(d) ? d : (d.data ?? []));
         })
         .catch(() => { /* ignore search errors */ });
@@ -78,12 +77,8 @@ export function SessionDetailModal({ session, onClose, onCancelSession, cancelli
     setCancellingBooking(bookingId);
     setBookingError(null);
     try {
-      const res = await fetch(`/api/proxy/classes/bookings/${bookingId}/cancel`, { method: 'POST' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
-      setBookings((prev) =>
+      await apiFetch(`/classes/bookings/${bookingId}/cancel`, { method: 'POST' });
+setBookings((prev) =>
         prev
           ? prev.map((b) => b.id === bookingId ? { ...b, status: 'CANCELLED', cancelledAt: new Date().toISOString() } : b)
           : prev,
@@ -99,12 +94,8 @@ export function SessionDetailModal({ session, onClose, onCancelSession, cancelli
     setCheckingInBooking(bookingId);
     setBookingError(null);
     try {
-      const res = await fetch(`/api/proxy/classes/bookings/${bookingId}/check-in`, { method: 'POST' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
-      setBookings((prev) =>
+      await apiFetch(`/classes/bookings/${bookingId}/check-in`, { method: 'POST' });
+setBookings((prev) =>
         prev
           ? prev.map((b) => b.id === bookingId ? { ...b, status: 'CHECKED_IN', checkedInAt: new Date().toISOString() } : b)
           : prev,
@@ -121,16 +112,10 @@ export function SessionDetailModal({ session, onClose, onCancelSession, cancelli
     setBookingBusy(true);
     setBookingFormError(null);
     try {
-      const res = await fetch('/api/proxy/classes/bookings', {
+      const newBooking = await apiFetch<ClassBookingRow>('/classes/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.id, memberId: selectedMember.id }),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
-      const newBooking = (await res.json()) as ClassBookingRow & { member?: ClassBookingRow['member'] };
       const enriched: ClassBookingRow = {
         ...newBooking,
         member:

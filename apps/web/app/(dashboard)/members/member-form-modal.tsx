@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { CalendarPopover } from '../../../components/ui/calendar-popover';
 import { SelectField } from '../../../components/ui/select-field';
+import { apiFetch } from '../../../lib/api';
 import type { MemberDetail, MemberRow, MembershipPlanRow, StaffRow } from '../../../lib/api';
 
 interface Props {
@@ -68,16 +69,14 @@ export function MemberFormModal({ member, onClose }: Props) {
 
   useEffect(() => {
     if (!isEdit) {
-      fetch('/api/proxy/membership-plans?active=true')
-        .then((r) => r.json())
+      apiFetch<MembershipPlanRow[]>('/membership-plans?active=true')
         .then((data: MembershipPlanRow[]) => setPlans(data))
         .catch(() => null);
     }
   }, [isEdit]);
 
   useEffect(() => {
-    fetch('/api/proxy/staff')
-      .then((r) => r.json())
+    apiFetch<StaffRow[]>('/staff')
       .then((data: StaffRow[]) => setStaff(data))
       .catch(() => null);
   }, []);
@@ -144,26 +143,20 @@ export function MemberFormModal({ member, onClose }: Props) {
     else payload.assignedTrainerId = null;
 
     try {
-      const url = isEdit ? `/api/proxy/members/${member!.id}` : '/api/proxy/members';
-      const res = await fetch(url, {
+      const url = isEdit ? `/members/${member!.id}` : '/members';
+      const created = await apiFetch<{ id?: string }>(url, {
         method: isEdit ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(body.message ?? `Error ${res.status}`);
-      }
+      
       // On create, optionally assign a membership plan
       if (!isEdit && form.planId) {
-        const created = (await res.clone().json().catch(() => null)) as { id?: string } | null;
         if (created?.id) {
           const start = form.planStartDate
             ? new Date(form.planStartDate + 'T00:00:00').toISOString()
             : new Date().toISOString();
-          await fetch('/api/proxy/memberships', {
+          await apiFetch('/memberships', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ memberId: created.id, planId: form.planId, startDate: start }),
           });
         }

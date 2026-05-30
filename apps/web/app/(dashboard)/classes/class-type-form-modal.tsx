@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { apiFetch } from '../../../lib/api';
 import type { ClassTypeRow } from '../../../lib/api';
-
 const PRESET_COLORS = [
   '#22c55e', '#3b82f6', '#f97316', '#a855f7',
   '#ec4899', '#14b8a6', '#eab308', '#ef4444',
@@ -49,17 +49,13 @@ export function ClassTypeFormModal({ type, onClose }: Props) {
     };
     try {
       const url = editing
-        ? `/api/proxy/classes/types/${type!.id}`
-        : '/api/proxy/classes/types';
-      const res = await fetch(url, {
+        ? `/classes/types/${type!.id}`
+        : '/classes/types';
+      await apiFetch(url, {
         method: editing ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       router.refresh();
       onClose();
     } catch (err) {

@@ -24,6 +24,7 @@ import { Alert } from '../../../components/ui/alert';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import type { MembershipPlanRow, ProductRow, SaleRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 type ViewMode = 'sell' | 'history';
 
@@ -164,10 +165,8 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
     }
     setSearchingMember(true);
     try {
-      const res = await fetch(`/api/proxy/members?search=${encodeURIComponent(q)}&pageSize=8`);
-      if (!res.ok) throw new Error();
-      const data = (await res.json()) as { items: Array<{ id: string; fullName: string; phone: string | null }> };
-      setMemberResults(data.items ?? []);
+      const membersRes = await apiFetch<{ items: Array<{ id: string; fullName: string; phone: string | null }> }>(`/members?search=${encodeURIComponent(q)}&pageSize=8`);
+                  setMemberResults(membersRes.items ?? []);
       setShowMemberDropdown(true);
     } catch {
       setMemberResults([]);
@@ -201,44 +200,35 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
         else if (k === 'DAY_PASS') saleType = 'DAY_PASS';
       }
 
-      const createRes = await fetch('/api/proxy/pos/sales', {
+      const createResult = await apiFetch<SaleRow>('/pos/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: saleType,
           memberId: selectedMember?.id,
           lines,
         }),
       });
-      if (!createRes.ok) {
-        const b = (await createRes.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${createRes.status}`);
-      }
-      const sale = (await createRes.json()) as SaleRow;
-      setCheckoutSale(sale);
+      
+      setCheckoutSale(createResult);
 
       // Create payment intent
-      const payRes = await fetch(`/api/proxy/pos/sales/${sale.id}/pay`, { method: 'POST' });
-      if (!payRes.ok) {
-        const b = (await payRes.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${payRes.status}`);
-      }
-      const intent = (await payRes.json()) as { clientSecret: string | null; paymentIntentId: string };
-
+      const intent = await apiFetch<{ clientSecret: string | null; paymentIntentId: string }>(`/pos/sales/${createResult.id}/pay`, { method: 'POST' });
+      
+      
       setCheckoutOpen(true);
       // In a real implementation, this is where we'd use Stripe Elements / card-present SDK
       // For now, we mark it as paid immediately (mock mode)
       if (!intent.clientSecret) {
         // Already paid or idempotent; refresh to get current state
         router.refresh();
-        setReceiptSale(sale);
+        setReceiptSale(createResult);
         setCheckoutOpen(false);
         setCheckoutSale(null);
         clearCart();
       }
       // clientSecret exists — in production, integrate Stripe Elements here
       // For mock mode, simulate immediate payment success:
-      setReceiptSale(sale);
+      setReceiptSale(createResult);
       setCheckoutOpen(false);
       setCheckoutSale(null);
       clearCart();
@@ -258,15 +248,11 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
     setError(null);
     try {
       const body = refundAmount.trim() ? { amountAed: Math.round(parseFloat(refundAmount) * 100) } : {};
-      const res = await fetch(`/api/proxy/pos/sales/${refundTarget.id}/refund`, {
+      await apiFetch(`pos/sales/${refundTarget.id}/refund`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       setRefundTarget(null);
       setRefundAmount('');
       setDetailSale(null);
@@ -914,7 +900,7 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
           <div className="relative z-10 w-full max-w-sm rounded-xl border border-border bg-surface shadow-2xl p-6">
             <h3 className="text-base font-semibold text-text mb-1">Issue Refund</h3>
             <p className="text-sm text-text2 mb-4">
-              Refund sale <span className="font-mono text-xs">{refundTarget.id}</span>?
+              Refund createResult <span className="font-mono text-xs">{refundTarget.id}</span>?
               Total: {aed(refundTarget.totalAed)}
               {(refundTarget as SaleRow & { refundedAed?: number }).refundedAed
                 ? ` (${aed((refundTarget as SaleRow & { refundedAed: number }).refundedAed)} already refunded)`

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 import type { MemberDetail } from '../../../../lib/api';
+import { apiFetch } from '../../../../lib/api';
 import { MemberFormModal } from '../member-form-modal';
 
 export function MemberDetailClient({ member }: { member: MemberDetail }) {
@@ -15,8 +16,7 @@ export function MemberDetailClient({ member }: { member: MemberDetail }) {
   async function handleDeactivate() {
     setDeactivating(true);
     try {
-      const res = await fetch(`/api/proxy/members/${member.id}/deactivate`, { method: 'PATCH' });
-      if (!res.ok) throw new Error('Failed to deactivate');
+      await apiFetch(`/members/${member.id}/deactivate`, { method: 'PATCH' });
       router.refresh();
     } finally {
       setDeactivating(false);

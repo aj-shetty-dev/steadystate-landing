@@ -9,6 +9,7 @@ import { SelectField } from '../../../components/ui/select-field';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type { MemberRow, MembershipPlanRow, MembershipRow, Paginated, UpcomingRenewalRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 import { PlanFormModal } from './plan-form-modal';
 
 const STATUS_TABS = [
@@ -151,9 +152,9 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
   useEffect(() => {
     if (!showAssign) return;
     setMembersLoading(true);
-    fetch('/api/proxy/members?pageSize=100')
-      .then((r) => r.json())
-      .then((data: Paginated<MemberRow> | MemberRow[]) => {
+    apiFetch<Paginated<MemberRow> | MemberRow[]>('/members?pageSize=100')
+      
+      .then((data) => {
         const rows = Array.isArray(data) ? data : data.items;
         setMemberOptions(rows);
       })
@@ -174,15 +175,11 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
     setBusy(membershipId);
     setActionError(null);
     try {
-      const res = await fetch(`/api/proxy/memberships/${membershipId}/${action}`, {
+      await apiFetch(`memberships/${membershipId}/${action}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       router.refresh();
     } catch (err) {
       setActionError((err as Error).message);
@@ -199,15 +196,11 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
     setBusy('assign');
     setActionError(null);
     try {
-      const res = await fetch('/api/proxy/memberships', {
+      await apiFetch('memberships', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId: assignMemberId, planId: assignPlanId, startDate: start, ...(assignPaidNow ? { status: 'ACTIVE' } : {}) }),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       router.refresh();
     } catch (err) {
       setActionError((err as Error).message);
@@ -232,11 +225,8 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
   async function doArchivePlan(planId: string) {
     setActionError(null);
     try {
-      const res = await fetch(`/api/proxy/membership-plans/${planId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      await apiFetch(`membership-plans/${planId}`, { method: 'DELETE' });
+      
       router.refresh();
     } catch (err) {
       setActionError((err as Error).message);
@@ -314,13 +304,11 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
               setRenewalsBusy(true);
               setRenewalsError(null);
               setRenewalsResult(null);
-              fetch('/api/proxy/memberships/process-renewals', { method: 'POST' })
-                .then(async (r) => {
-                  const body = await r.json() as { due: number; created: number; skipped: number; failed: number };
-                  if (!r.ok) throw new Error((body as unknown as { message?: string }).message ?? `Error ${r.status}`);
-                  setRenewalsResult(body);
-                  router.refresh();
-                })
+              apiFetch('/memberships/process-renewals', { method: 'POST' })
+                .then((body: any) => {
+      setRenewalsResult(body);
+      router.refresh();
+    })
                 .catch((err: Error) => setRenewalsError(err.message))
                 .finally(() => setRenewalsBusy(false));
             }}

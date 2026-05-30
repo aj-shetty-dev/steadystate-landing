@@ -9,6 +9,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import type { MemberRow, Paginated } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 import { CsvImportModal } from './csv-import-modal';
 import { MemberFormModal } from './member-form-modal';
 
@@ -170,9 +171,8 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
     setDeactivating(m.id);
     setOptimisticCancelled((prev) => new Set(prev).add(m.id));
     try {
-      const res = await fetch(`/api/proxy/members/${m.id}/deactivate`, { method: 'PATCH' });
-      if (!res.ok) throw new Error('Failed to deactivate');
-      router.refresh();
+      await apiFetch(`/members/${m.id}/deactivate`, { method: 'PATCH' });
+            router.refresh();
     } catch {
       setOptimisticCancelled((prev) => {
         const next = new Set(prev);

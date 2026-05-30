@@ -23,6 +23,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type { InvoiceRow, Paginated } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 const INVOICE_STATUSES = ['ALL', 'DUE', 'PAID', 'FAILED', 'RETRY_SCHEDULED', 'WRITTEN_OFF'] as const;
 
@@ -140,9 +141,7 @@ export function BillingClient({
   const loadDetail = async (id: string) => {
     setDetailLoading(true);
     try {
-      const res = await fetch(`/api/proxy/billing/invoices/${id}`);
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
-      const data = await res.json();
+      const data = await apiFetch<any>(`/billing/invoices/${id}`);
       setDetail(data);
       setDetailOpen(true);
     } catch (e) {
@@ -156,9 +155,8 @@ export function BillingClient({
     if (!composeSelectedMember) return;
     setComposeSaving(true);
     try {
-      const res = await fetch('/api/proxy/billing/invoices', {
+      await apiFetch<InvoiceDetail>('/billing/invoices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           memberId: composeSelectedMember.id,
           amountAed: composeForm.amountAed,
@@ -167,7 +165,6 @@ export function BillingClient({
           description: composeForm.description || undefined,
         }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
       setComposeOpen(false);
       setComposeSelectedMember(null);
       setComposeForm({ amountAed: 0, vatAed: 0, dueDate: '', description: '' });
@@ -183,9 +180,8 @@ export function BillingClient({
     if (!detail) return;
     setEditSaving(true);
     try {
-      const res = await fetch(`/api/proxy/billing/invoices/${detail.id}`, {
+      await apiFetch(`/billing/invoices/${detail.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amountAed: editData.amountAed,
           vatAed: editData.vatAed,
@@ -193,7 +189,6 @@ export function BillingClient({
           description: editData.description || null,
         }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
       setEditOpen(false);
       router.refresh();
       loadDetail(detail.id);
@@ -206,8 +201,7 @@ export function BillingClient({
 
   const handleVoid = async (id: string) => {
     try {
-      const res = await fetch(`/api/proxy/billing/invoices/${id}/void`, { method: 'POST' });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
+      await apiFetch(`billing/invoices/${id}/void`, { method: 'POST' })
       router.refresh();
       loadDetail(id);
     } catch (e) {
@@ -217,8 +211,7 @@ export function BillingClient({
 
   const handleWriteOff = async (id: string) => {
     try {
-      const res = await fetch(`/api/proxy/billing/invoices/${id}/write-off`, { method: 'POST' });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
+      await apiFetch(`billing/invoices/${id}/write-off`, { method: 'POST' })
       router.refresh();
       loadDetail(id);
     } catch (e) {
@@ -228,9 +221,7 @@ export function BillingClient({
 
   const handlePaymentLink = async (id: string) => {
     try {
-      const res = await fetch(`/api/proxy/billing/invoices/${id}/payment-link`, { method: 'POST' });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
-      const data = await res.json();
+      const data = await apiFetch<any>(`/billing/invoices/${id}/payment-link`, { method: 'POST' })
       window.open(data.url, '_blank');
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to generate payment link');
@@ -239,9 +230,8 @@ export function BillingClient({
 
   const handleDownloadHtml = async (id: string) => {
     try {
-      const res = await fetch(`/api/proxy/billing/invoices/${id}/html`);
-      const data = await res.json();
-      const blob = new Blob([data.html], { type: 'text/html' });
+      const htmlData = await apiFetch<{ html: string }>(`/billing/invoices/${id}/html`);
+      const blob = new Blob([htmlData.html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `invoice-${id.slice(0, 8)}.html`; a.click();
@@ -255,21 +245,17 @@ export function BillingClient({
     setComposeMemberSearch(q);
     if (q.length < 2) { setComposeMemberResults([]); return; }
     try {
-      const res = await fetch(`/api/proxy/members?search=${encodeURIComponent(q)}&take=10`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setComposeMemberResults((data.items ?? data).slice(0, 10));
+      const membersResult = await apiFetch<any>(`/members?search=${encodeURIComponent(q)}&take=10`);
+      setComposeMemberResults((membersResult.items ?? membersResult).slice(0, 10));
     } catch { /* ignore */ }
   };
 
   const loadSalaryWindow = async () => {
     setSalaryLoading(true);
     try {
-      const res = await fetch('/api/proxy/billing/salary-window');
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
-      if (data) {
-        setSalaryForm({ startDay: data.startDay, endDay: data.endDay, timezone: data.timezone, jitterMinutes: data.jitterMinutes });
+      const salaryWindowData = await apiFetch<any>('/billing/salary-window');
+      if (salaryWindowData) {
+        setSalaryForm({ startDay: salaryWindowData.startDay, endDay: salaryWindowData.endDay, timezone: salaryWindowData.timezone, jitterMinutes: salaryWindowData.jitterMinutes });
       }
     } catch { /* use defaults */ } finally {
       setSalaryLoading(false);
@@ -279,13 +265,10 @@ export function BillingClient({
   const saveSalaryWindow = async () => {
     setSalarySaving(true);
     try {
-      const res = await fetch('/api/proxy/billing/salary-window', {
+      await apiFetch('/billing/salary-window', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(salaryForm),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Failed');
-      await res.json();
       setError(null);
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to save');
@@ -297,9 +280,8 @@ export function BillingClient({
   const loadReconciliation = async () => {
     setReconLoading(true);
     try {
-      const res = await fetch('/api/proxy/billing/reconciliation');
-      if (!res.ok) throw new Error('Failed');
-      setRecon(await res.json());
+      const reconData = await apiFetch<Record<string, string>>('/billing/reconciliation');
+      setRecon(reconData);
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Failed to load');
     } finally {

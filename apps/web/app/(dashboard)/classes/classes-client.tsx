@@ -27,6 +27,8 @@ import { RecurrenceFormModal } from './recurrence-form-modal';
 import { SessionDetailModal } from './session-detail-modal';
 import { SessionFormModal } from './session-form-modal';
 
+import { apiFetch } from '../../../lib/api';
+
 const DAY_LABELS: Record<number, string> = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
 
 const SESSION_STATUS_TABS = [
@@ -160,11 +162,7 @@ export function ClassesClient({
     setCancellingSession(true);
     setSessionError(null);
     try {
-      const res = await fetch(`/api/proxy/classes/sessions/${sessionId}/cancel`, { method: 'POST' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      await apiFetch(`classes/sessions/${sessionId}/cancel`, { method: 'POST' })
       setCancelSessionTarget(null);
       setDetailSession(null);
       router.refresh();
@@ -178,11 +176,7 @@ export function ClassesClient({
   async function doArchiveType(typeId: string) {
     setTypeError(null);
     try {
-      const res = await fetch(`/api/proxy/classes/types/${typeId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      await apiFetch(`classes/types/${typeId}`, { method: 'DELETE' })
       setArchiveTypeTarget(null);
       router.refresh();
     } catch (err) {
@@ -193,11 +187,7 @@ export function ClassesClient({
   async function doDeactivateRecurrence(recId: string) {
     setRecError(null);
     try {
-      const res = await fetch(`/api/proxy/classes/recurrences/${recId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      await apiFetch(`classes/recurrences/${recId}`, { method: 'DELETE' })
       setDeactivateTarget(null);
       router.refresh();
     } catch (err) {

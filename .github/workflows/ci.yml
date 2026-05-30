@@ -8,6 +8,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql://steady:steady@localhost:5432/steady_state_test?schema=steadystate
+      JWT_ACCESS_SECRET: ci_access_secret_ci_32_chars_min
+      JWT_REFRESH_SECRET: ci_refresh_secret_ci_32_chars_min
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 7d
+      TWILIO_MODE: mock
+      CRM_MODE: fake
+      BILLING_PROVIDER_MODE: mock
+      NODE_ENV: test
+      LOG_LEVEL: warn
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
+      CLERK_SECRET_KEY: sk_test_ci
+
     services:
       postgres:
         image: postgres:16
@@ -21,32 +36,6 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
-      redis:
-        image: redis:7
-        ports: ['6379:6379']
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=10
-
-    env:
-      DATABASE_URL: postgresql://steady:steady@localhost:5432/steady_state_test?schema=steadystate
-      REDIS_URL: redis://localhost:6379
-      JWT_ACCESS_SECRET: ci_access_secret_ci_access_secret_ci_access
-      JWT_REFRESH_SECRET: ci_refresh_secret_ci_refresh_secret_ci_refresh
-      JWT_ACCESS_TTL: 15m
-      JWT_REFRESH_TTL: 7d
-      TWILIO_ACCOUNT_SID: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-      TWILIO_AUTH_TOKEN: ci-test-token
-      TWILIO_WHATSAPP_FROM: 'whatsapp:+14155238886'
-      TWILIO_MODE: mock
-      CRM_MODE: fake
-      DOOR_WEBHOOK_SECRET: ci-door-secret-ci-door-secret
-      DATA_REGION: me-south-1
-      BILLING_PROVIDER_MODE: mock
-      NODE_ENV: test
-      LOG_LEVEL: warn
 
     steps:
       - uses: actions/checkout@v4
@@ -57,9 +46,8 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @steady-state/api prisma:generate
+      - run: pnpm --filter @steady-state/web exec prisma generate
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
-      - run: pnpm --filter @steady-state/api build
       - run: pnpm --filter @steady-state/web build

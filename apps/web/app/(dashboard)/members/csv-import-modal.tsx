@@ -4,6 +4,8 @@ import { Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { apiFetch } from '../../../lib/api';
+
 interface PreviewError { row: number; error: string }
 interface PreviewRow { fullName: string; phone: string; email?: string }
 
@@ -64,13 +66,12 @@ export function CsvImportModal({ onClose }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/proxy/importer/members/preview', {
+      const data = await apiFetch<ImportPreview & { message?: string }>('/importer/members/preview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ csv: csvText }),
       });
-      const data = await res.json() as ImportPreview & { message?: string };
-      if (!res.ok) { setError(data.message ?? 'Preview failed'); return; }
+      
+      
       setPreview(data);
       setStep('preview');
     } catch {
@@ -85,13 +86,12 @@ export function CsvImportModal({ onClose }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/proxy/importer/members/apply', {
+      const data = await apiFetch<ImportResult & { message?: string }>('/importer/members/apply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ csv: csvText }),
       });
-      const data = await res.json() as ImportResult & { message?: string };
-      if (!res.ok) { setError(data.message ?? 'Import failed'); return; }
+      
+      
       setResult(data);
       setStep('done');
       router.refresh();

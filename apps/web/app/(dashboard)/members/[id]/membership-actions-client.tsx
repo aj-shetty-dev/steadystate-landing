@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 import { SelectField } from '../../../../components/ui/select-field';
 import { StatusBadge } from '../../../../components/ui/status-badge';
 import type { MembershipPlanRow, MembershipRow } from '../../../../lib/api';
+import { apiFetch } from '../../../../lib/api';
 
 interface Props {
   memberId: string;
@@ -37,9 +38,9 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
   const [freezeReason, setFreezeReason] = useState('');
 
   useEffect(() => {
-    fetch('/api/proxy/membership-plans?active=true')
-      .then((r) => r.json())
-      .then((data: MembershipPlanRow[]) => setPlans(data))
+    apiFetch<MembershipPlanRow[]>('/membership-plans?active=true')
+      
+      .then((data) => setPlans(data))
       .catch(() => null);
   }, []);
 
@@ -60,15 +61,11 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(path, {
+      await apiFetch(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -82,7 +79,7 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
       ? new Date(assignStart + 'T00:00:00').toISOString()
       : new Date().toISOString();
     setShowAssign(false);
-    await doAction('/api/proxy/memberships', { memberId, planId: assignPlanId, startDate: start });
+    await doAction('/memberships', { memberId, planId: assignPlanId, startDate: start });
   }
 
   async function handleChangePlan() {
@@ -90,7 +87,7 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
       ? new Date(changePlanStart + 'T00:00:00').toISOString()
       : undefined;
     setShowChangePlan(false);
-    await doAction(`/api/proxy/memberships/${membership!.id}/change-plan`, {
+    await doAction(`/memberships/${membership!.id}/change-plan`, {
       newPlanId,
       ...(start ? { startDate: start } : {}),
     });
@@ -98,7 +95,7 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
 
   async function handleFreeze() {
     setShowFreeze(false);
-    await doAction(`/api/proxy/memberships/${membership!.id}/freeze`, {
+    await doAction(`/memberships/${membership!.id}/freeze`, {
       startDate: new Date(freezeStart + 'T00:00:00').toISOString(),
       endDate: new Date(freezeEnd + 'T00:00:00').toISOString(),
       ...(freezeReason ? { reason: freezeReason } : {}),
@@ -139,7 +136,7 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
         )}
         {canActivate && (
           <button
-            onClick={() => void doAction(`/api/proxy/memberships/${membership!.id}/activate`)}
+            onClick={() => void doAction(`/memberships/${membership!.id}/activate`)}
             disabled={busy}
             className="px-3 py-1.5 text-xs rounded-md bg-green/10 text-green hover:bg-green/20 font-medium disabled:opacity-40 transition-colors"
           >
@@ -157,7 +154,7 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
         )}
         {canUnfreeze && (
           <button
-            onClick={() => void doAction(`/api/proxy/memberships/${membership!.id}/unfreeze`)}
+            onClick={() => void doAction(`/memberships/${membership!.id}/unfreeze`)}
             disabled={busy}
             className="px-3 py-1.5 text-xs rounded-md bg-surface2 text-text2 hover:bg-border/40 font-medium disabled:opacity-40 transition-colors"
           >
@@ -334,7 +331,7 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
           destructive
           onConfirm={() => {
             setShowCancel(false);
-            void doAction(`/api/proxy/memberships/${membership!.id}/cancel`);
+            void doAction(`/memberships/${membership!.id}/cancel`);
           }}
           onCancel={() => setShowCancel(false)}
         />

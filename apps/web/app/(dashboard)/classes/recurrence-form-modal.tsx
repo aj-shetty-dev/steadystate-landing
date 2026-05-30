@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { ClassTypeRow, StaffRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 const DAYS = [
   { label: 'Sun', value: 0 },
@@ -69,15 +70,11 @@ export function RecurrenceFormModal({ types, staff, onClose }: Props) {
       ...(form.validUntil ? { validUntil: new Date(form.validUntil + 'T23:59:59').toISOString() } : {}),
     };
     try {
-      const res = await fetch('/api/proxy/classes/recurrences', {
+      await apiFetch('/classes/recurrences', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       router.refresh();
       onClose();
     } catch (err) {

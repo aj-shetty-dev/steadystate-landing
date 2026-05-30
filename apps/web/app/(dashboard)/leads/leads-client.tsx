@@ -19,6 +19,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { KanbanSkeleton } from '../../../components/skeletons/kanban-skeleton';
 import type { LeadRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 const STAGES = ['NEW', 'CONTACTED', 'TRIAL_BOOKED', 'TRIAL_COMPLETED', 'CONVERTED', 'LOST'] as const;
 
@@ -108,9 +109,8 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/proxy/leads', {
+      const created = await apiFetch<LeadRow>('/leads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: addForm.fullName.trim(),
           phone: addForm.phone.trim(),
@@ -119,11 +119,6 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
           notes: addForm.notes.trim() || undefined,
         }),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
-      const created = (await res.json()) as LeadRow;
       setLeads((prev) => [...prev, created]);
       setShowAdd(false);
       resetAddForm();
@@ -166,17 +161,10 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, stage: targetStage } : l)));
 
     try {
-      const res = await fetch(`/api/proxy/leads/${leadId}`, {
+      await apiFetch(`/leads/${leadId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stage: targetStage }),
       });
-      if (!res.ok) {
-        // Revert
-        setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, stage: lead.stage } : l)));
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
       setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -188,11 +176,8 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
     setDetailLead(lead);
     setDetailLoading(true);
     try {
-      const res = await fetch(`/api/proxy/leads/${lead.id}`);
-      if (res.ok) {
-        const full = (await res.json()) as LeadRow;
-        setDetailLead(full);
-      }
+      const full = await apiFetch<LeadRow>(`/leads/${lead.id}`);
+      setDetailLead(full);
     } catch {
       // Use basic lead data
     } finally {
@@ -205,19 +190,14 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
     if (!detailLead || !activitySummary.trim()) return;
     setLoggingActivity(true);
     try {
-      const res = await fetch(`/api/proxy/leads/${detailLead.id}/activities`, {
+      await apiFetch(`/leads/${detailLead.id}/activities`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: activityType, summary: activitySummary.trim() }),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
       setActivitySummary('');
       // Refresh detail
-      const refetch = await fetch(`/api/proxy/leads/${detailLead.id}`);
-      if (refetch.ok) setDetailLead((await refetch.json()) as LeadRow);
+      const updatedLead = await apiFetch<LeadRow>(`/leads/${detailLead.id}`);
+      setDetailLead(updatedLead);
       setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -232,21 +212,15 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
     setConverting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/leads/${detailLead.id}/convert`, {
+      const convertResult = await apiFetch<{ memberId: string }>(`/leads/${detailLead.id}/convert`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
-      const result = (await res.json()) as { memberId: string };
       // Mark as converted locally
       setLeads((prev) =>
-        prev.map((l) => (l.id === detailLead.id ? { ...l, stage: 'CONVERTED', convertedMemberId: result.memberId } : l)),
+        prev.map((l) => (l.id === detailLead.id ? { ...l, stage: 'CONVERTED', convertedMemberId: convertResult.memberId } : l)),
       );
-      setDetailLead((prev) => (prev ? { ...prev, stage: 'CONVERTED', convertedMemberId: result.memberId } : null));
+      setDetailLead((prev) => (prev ? { ...prev, stage: 'CONVERTED', convertedMemberId: convertResult.memberId } : null));
       setIsLoading(true); router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -260,15 +234,10 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
     if (!detailLead) return;
     setSettingFollowUp(true);
     try {
-      const res = await fetch(`/api/proxy/leads/${detailLead.id}`, {
+      await apiFetch(`/leads/${detailLead.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nextFollowUpAt: date ? new Date(date).toISOString() : null }),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
       setDetailLead((prev) => (prev ? { ...prev, nextFollowUpAt: date ? new Date(date).toISOString() : null } : null));
       setLeads((prev) =>
         prev.map((l) => (l.id === detailLead.id ? { ...l, nextFollowUpAt: date ? new Date(date).toISOString() : null } : l)),

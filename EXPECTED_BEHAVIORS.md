@@ -93,6 +93,12 @@ Living inventory of expected functionality across the platform. Update as featur
 - [x] Check-in updates member.lastCheckinAt
 - [x] Recent check-ins are listed in the check-ins log page
 - [x] Check-in history appears on the member profile page
+- [x] Class sessions auto-generate a unique 6-character check-in code (alphanumeric, excluding 0/O/1/I/L)
+- [x] A manual check-in can be created from the dashboard with phone number (required), optional class code, and optional notes (`POST /checkins`, source MANUAL)
+- [x] A check-in can be created by class code + phone from the dashboard (`POST /checkins/by-code`) — resolves the session by code and the member by phone, auto-links the check-in to that session
+- [x] A member can self-check-in via the member portal (`POST /m/checkin`) — authenticated, optionally accepts a sessionCode to link to a specific class session
+- [x] Check-in by code and self-check-in validate that the session is SCHEDULED — reject with "no longer open for check-in" otherwise
+- [x] Check-in by code validates the code exists — reject with "Invalid check-in code" / "Invalid class code" if not found
 
 ## Staff
 

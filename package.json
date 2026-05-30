@@ -9,25 +9,22 @@
     "pnpm": ">=9.0.0"
   },
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e",
-    "typecheck": "turbo run typecheck",
+    "build": "pnpm --filter @steady-state/web build",
+    "dev": "pnpm --filter @steady-state/web dev",
+    "lint": "pnpm --filter @steady-state/web lint",
+    "typecheck": "pnpm --filter @steady-state/web typecheck",
+    "test": "pnpm --filter @steady-state/web test",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
-    "db:up": "docker compose up -d postgres redis",
-    "db:down": "docker compose down",
-    "db:migrate": "pnpm --filter @steady-state/api prisma migrate dev",
-    "db:generate": "pnpm --filter @steady-state/api prisma generate",
-    "db:seed": "pnpm --filter @steady-state/api db:seed",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "db:generate": "pnpm --filter @steady-state/web db:generate",
+    "db:push": "pnpm --filter @steady-state/web db:push",
+    "db:migrate": "pnpm --filter @steady-state/web db:migrate",
+    "db:studio": "pnpm --filter @steady-state/web db:studio",
+    "clean": "pnpm --filter @steady-state/web clean && rm -rf node_modules"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "prettier": "^3.3.3",
-    "turbo": "^2.3.3",
     "typescript": "^5.6.3"
   }
 }

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { apiFetch } from '../../../lib/api';
+
 export function BillingActions() {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -12,10 +14,8 @@ export function BillingActions() {
     setBusy(action);
     setMsg(null);
     try {
-      const res = await fetch(`/api/proxy/billing/${action}`, { method: 'POST' });
-      const data = (await res.json()) as Record<string, number | string>;
-      if (!res.ok) throw new Error((data as { message?: string }).message ?? 'failed');
-      setMsg(`${action}: ${JSON.stringify(data)}`);
+      const data = await apiFetch<Record<string, number | string>>(`/billing/${action}`, { method: 'POST' })
+                  setMsg(`${action}: ${JSON.stringify(data)}`);
       router.refresh();
     } catch (e) {
       setMsg(`${action} failed: ${(e as Error).message}`);

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { apiFetch } from '../../../lib/api';
+
 interface SubscriptionActionsProps {
   hasStripeCustomer: boolean;
   plan: string;
@@ -16,18 +18,15 @@ export function SubscriptionActions({ hasStripeCustomer, plan, status }: Subscri
     setBusy('checkout');
     setError(null);
     try {
-      const res = await fetch('/api/proxy/subscriptions/checkout', {
+      const data = await apiFetch<{ url?: string; message?: string }>('/subscriptions/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan: newPlan,
           successUrl: `${window.location.origin}/subscription?checkout=success`,
           cancelUrl: `${window.location.origin}/subscription`,
         }),
       });
-      const data = (await res.json()) as { url?: string; message?: string };
-      if (!res.ok) throw new Error(data.message ?? 'Checkout failed');
-      if (data.url) window.location.href = data.url;
+                  if (data.url) window.location.href = data.url;
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -39,14 +38,11 @@ export function SubscriptionActions({ hasStripeCustomer, plan, status }: Subscri
     setBusy('portal');
     setError(null);
     try {
-      const res = await fetch('/api/proxy/subscriptions/portal', {
+      const data = await apiFetch<{ url?: string; message?: string }>('/subscriptions/portal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ returnUrl: `${window.location.origin}/subscription` }),
       });
-      const data = (await res.json()) as { url?: string; message?: string };
-      if (!res.ok) throw new Error(data.message ?? 'Portal failed');
-      if (data.url) window.location.href = data.url;
+                  if (data.url) window.location.href = data.url;
     } catch (e) {
       setError((e as Error).message);
     } finally {

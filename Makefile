@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: help dev api web install typecheck lint test build clean \
-        db-generate db-push db-migrate db-seed db-studio shared-types
+.PHONY: help dev web install typecheck lint test build clean \
+        db-generate db-push db-migrate db-studio
 
 # ── colours ─────────────────────────────────────────────────────────────────
 BOLD  := \033[1m
@@ -10,51 +10,40 @@ GREEN := \033[32m
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  $(GREEN)%-18s$(RESET) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-# ── shared-types ─────────────────────────────────────────────────────────────
-shared-types: ## Build shared-types package (required before first dev run)
-	pnpm --filter @steady-state/shared-types build
-
-# ── dev servers ─────────────────────────────────────────────────────────────
-dev: shared-types ## Build shared-types then start API (4000) + web (3000)
-	pnpm dev
-
-api: shared-types ## Build shared-types then start only the NestJS API on :4000
-	pnpm --filter @steady-state/api dev
-
-web: ## Start only the Next.js dashboard on :3000
+# ── dev server ─────────────────────────────────────────────────────────────
+dev: ## Start Next.js app on :3000
 	pnpm --filter @steady-state/web dev
 
+web: dev ## Alias for dev
+
 # ── quality ──────────────────────────────────────────────────────────────────
-typecheck: ## Run TypeScript across all packages
-	pnpm typecheck
+typecheck: ## Run TypeScript
+	pnpm --filter @steady-state/web typecheck
 
-lint: ## Run ESLint across all packages
-	pnpm lint
+lint: ## Run ESLint
+	pnpm --filter @steady-state/web lint
 
-test: ## Run Vitest unit tests
-	pnpm test
+test: ## Run Vitest
+	pnpm --filter @steady-state/web test
 
-check: typecheck lint test ## Run full quality gate (typecheck + lint + test)
+check: typecheck lint test ## Run full quality gate
 
 # ── build ────────────────────────────────────────────────────────────────────
-build: ## Production build (api + web)
-	pnpm build
+build: ## Production build
+	pnpm --filter @steady-state/web build
 
 # ── database ─────────────────────────────────────────────────────────────────
-db-generate: ## Regenerate Prisma client after schema changes
-	pnpm --filter @steady-state/api exec prisma generate
+db-generate: ## Regenerate Prisma client
+	pnpm --filter @steady-state/web exec prisma generate
 
-db-push: ## Push schema directly to DB (dev/quick iteration — no migration file)
-	pnpm --filter @steady-state/api exec prisma db push
+db-push: ## Push schema directly to DB (dev iteration)
+	pnpm --filter @steady-state/web exec prisma db push
 
-db-migrate: ## Create + apply a new migration (prompts for a name)
-	pnpm --filter @steady-state/api exec prisma migrate dev
+db-migrate: ## Create + apply a new migration
+	pnpm --filter @steady-state/web exec prisma migrate dev
 
-db-studio: ## Open Prisma Studio (browser DB explorer)
-	pnpm --filter @steady-state/api exec prisma studio
-
-db-seed: ## Seed the database
-	pnpm --filter @steady-state/api db:seed
+db-studio: ## Open Prisma Studio
+	pnpm --filter @steady-state/web exec prisma studio
 
 # ── housekeeping ─────────────────────────────────────────────────────────────
 install: ## Install all dependencies

@@ -4,8 +4,8 @@ import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { SelectField } from '../../../components/ui/select-field';
+import { apiFetch } from '../../../lib/api';
 import type { MembershipPlanRow } from '../../../lib/api';
-
 interface Props {
   plan?: MembershipPlanRow | null;
   onClose: () => void;
@@ -79,17 +79,12 @@ export function PlanFormModal({ plan, onClose }: Props) {
 
     try {
       const url = isEdit
-        ? `/api/proxy/membership-plans/${plan!.id}`
-        : '/api/proxy/membership-plans';
-      const res = await fetch(url, {
+        ? `/membership-plans/${plan!.id}`
+        : '/membership-plans';
+      await apiFetch(url, {
         method: isEdit ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(body.message ?? `Error ${res.status}`);
-      }
       router.refresh();
       onClose();
     } catch (err) {

@@ -19,6 +19,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type { MessageRow, Paginated } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 const STATUSES = ['ALL', 'QUEUED', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'UNDELIVERED'] as const;
 const MEMBERSHIP_STATUSES = ['ACTIVE', 'FROZEN', 'EXPIRED', 'CANCELLED', 'PAUSED', 'PENDING'] as const;
@@ -122,8 +123,8 @@ export function MessagesClient({
     if (q.length < 2) { setMemberResults([]); return; }
     setMemberSearching(true);
     try {
-      const res = await fetch(`/api/proxy/members?search=${encodeURIComponent(q)}&take=10`);
-      if (!res.ok) return;
+      const res = await apiFetch<any>(`/members?search=${encodeURIComponent(q)}&take=10`);
+      //
       const data = await res.json();
       setMemberResults((data.items ?? data).slice(0, 10));
     } catch {
@@ -138,12 +139,11 @@ export function MessagesClient({
     setComposeSending(true);
     setComposeResult(null);
     try {
-      const res = await fetch('/api/proxy/whatsapp/messages/send', {
+      await apiFetch('/whatsapp/messages/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: selectedMember.phone, body: composeBody.trim() }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Send failed');
+      
       setComposeResult('Message sent successfully');
       setComposeBody('');
       setSelectedMember(null);
@@ -166,14 +166,11 @@ export function MessagesClient({
       if (segmentCheckinFrom) segment.lastCheckinFrom = segmentCheckinFrom;
       if (segmentCheckinTo) segment.lastCheckinTo = segmentCheckinTo;
 
-      const res = await fetch('/api/proxy/whatsapp/messages/broadcast', {
+      const result = await apiFetch<any>('/whatsapp/messages/broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: composeBody.trim(), segment }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Broadcast failed');
-      const result = await res.json();
-      setBroadcastResult(result);
+            setBroadcastResult(result);
       setComposeBody('');
       router.refresh();
     } catch (e) {
@@ -186,8 +183,8 @@ export function MessagesClient({
   const handleResend = async (id: string) => {
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/whatsapp/messages/${id}/resend`, { method: 'POST' });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? 'Resend failed');
+      await apiFetch(`/whatsapp/messages/${id}/resend`, { method: 'POST' });
+      
       router.refresh();
     } catch (e) {
       setError((e as { message?: string }).message ?? 'Resend failed');

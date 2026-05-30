@@ -17,6 +17,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import type { StaffRow } from '../../../lib/api';
+import { apiFetch } from '../../../lib/api';
 
 const ROLES = ['TRAINER', 'RECEPTION', 'MANAGER', 'CLEANER', 'OTHER'] as const;
 
@@ -113,29 +114,19 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
       };
 
       if (editingStaff) {
-        const res = await fetch(`/api/proxy/staff/${editingStaff.id}`, {
+        const updated = await apiFetch<StaffRow>(`/staff/${editingStaff.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        if (!res.ok) {
-          const b = (await res.json().catch(() => ({}))) as { message?: string };
-          throw new Error(b.message ?? `Error ${res.status}`);
-        }
-        const updated = (await res.json()) as StaffRow;
-        setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        
+                setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
       } else {
-        const res = await fetch('/api/proxy/staff', {
+        const created = await apiFetch<StaffRow>('/staff', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        if (!res.ok) {
-          const b = (await res.json().catch(() => ({}))) as { message?: string };
-          throw new Error(b.message ?? `Error ${res.status}`);
-        }
-        const created = (await res.json()) as StaffRow;
-        setStaff((prev) => [...prev, created]);
+        
+                setStaff((prev) => [...prev, created]);
       }
       setShowForm(false);
       setIsLoading(true); router.refresh();
@@ -151,15 +142,11 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
     setSavingPin(true);
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/staff/${pinTarget.id}`, {
+      await apiFetch(`staff/${pinTarget.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pinValue }),
       });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      
       setShowPin(false);
       setPinTarget(null);
       setPinValue('');
@@ -174,11 +161,8 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
   async function handleDeactivate(s: StaffRow) {
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/staff/${s.id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      await apiFetch(`staff/${s.id}`, { method: 'DELETE' });
+      
       setStaff((prev) => prev.map((x) => (x.id === s.id ? { ...x, active: false, terminatedAt: new Date().toISOString() } : x)));
       setIsLoading(true); router.refresh();
     } catch (err) {
@@ -190,11 +174,8 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
   async function handleReactivate(s: StaffRow) {
     setError(null);
     try {
-      const res = await fetch(`/api/proxy/staff/${s.id}/reactivate`, { method: 'POST' });
-      if (!res.ok) {
-        const b = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(b.message ?? `Error ${res.status}`);
-      }
+      await apiFetch(`staff/${s.id}/reactivate`, { method: 'POST' });
+      
       setStaff((prev) => prev.map((x) => (x.id === s.id ? { ...x, active: true, terminatedAt: null } : x)));
       setIsLoading(true); router.refresh();
     } catch (err) {
