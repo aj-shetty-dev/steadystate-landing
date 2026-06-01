@@ -17,38 +17,26 @@ const isProtectedPage = createRouteMatcher([
 
 const isApiRoute = createRouteMatcher(['/api(.*)']);
 
-export default clerkMiddleware(
-  async (auth, req) => {
-    if (isApiRoute(req)) {
-      const { userId } = await auth();
-      if (!userId) {
-        return NextResponse.json({ message: 'Unauthenticated' }, { status: 401 });
-      }
-      return NextResponse.next();
+export default clerkMiddleware(async (auth, req) => {
+  if (isApiRoute(req)) {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ message: 'Unauthenticated' }, { status: 401 });
     }
-
-    if (isProtectedPage(req)) {
-      const { userId } = await auth();
-      if (!userId) {
-        const signInUrl = new URL('/sign-in', req.url);
-        signInUrl.searchParams.set('redirect_url', req.url);
-        return NextResponse.redirect(signInUrl);
-      }
-    }
-
     return NextResponse.next();
-  },
-  {
-    publicRoutes: [
-      '/',
-      '/sign-in(.*)',
-      '/sign-up(.*)',
-      '/signup(.*)',
-      '/login(.*)',
-      '/pricing(.*)',
-    ],
-  },
-);
+  }
+
+  if (isProtectedPage(req)) {
+    const { userId } = await auth();
+    if (!userId) {
+      const signInUrl = new URL('/sign-in', req.url);
+      signInUrl.searchParams.set('redirect_url', req.url);
+      return NextResponse.redirect(signInUrl);
+    }
+  }
+
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: [
