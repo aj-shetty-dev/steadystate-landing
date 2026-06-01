@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm --filter @steady-state/web build",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "pnpm install",
+  "installCommand": "corepack enable && pnpm install",
   "framework": "nextjs"
 }
