@@ -1,21 +1,7 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-const isProtectedPage = createRouteMatcher([
-  '/overview(.*)',
-  '/members(.*)',
-  '/connections(.*)',
-  '/automation(.*)',
-  '/messages(.*)',
-  '/billing(.*)',
-  '/shop(.*)',
-  '/door(.*)',
-  '/subscription(.*)',
-  '/admin(.*)',
-  '/onboarding(.*)',
-]);
-
-const isApiRoute = createRouteMatcher(['/api(.*)']);
+const isApiRoute = (req: Request) => new URL(req.url).pathname.startsWith('/api');
 
 export default clerkMiddleware(async (auth, req) => {
   if (isApiRoute(req)) {
@@ -23,11 +9,6 @@ export default clerkMiddleware(async (auth, req) => {
     if (!userId) {
       return NextResponse.json({ message: 'Unauthenticated' }, { status: 401 });
     }
-    return NextResponse.next();
-  }
-
-  if (isProtectedPage(req)) {
-    await auth.protect();
   }
 
   return NextResponse.next();
