@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @steady-state/web build",
+  "buildCommand": "cd apps/web && prisma generate && next build",
   "outputDirectory": "apps/web/.next",
   "installCommand": "corepack enable && pnpm install",
   "framework": "nextjs"
