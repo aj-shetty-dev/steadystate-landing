@@ -1,5 +1,5 @@
 {
-  "buildCommand": "[ -d apps/web ] && cd apps/web; prisma generate && next build",
+  "buildCommand": "cd apps/web && prisma generate && next build",
   "outputDirectory": "apps/web/.next",
   "installCommand": "corepack enable && pnpm install",
   "framework": "nextjs"
