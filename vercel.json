@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd apps/web && prisma generate && next build",
-  "outputDirectory": "apps/web/.next",
+  "buildCommand": "prisma generate && next build",
+  "outputDirectory": ".next",
   "installCommand": "corepack enable && pnpm install",
   "framework": "nextjs"
 }
