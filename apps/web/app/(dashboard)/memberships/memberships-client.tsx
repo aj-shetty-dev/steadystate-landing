@@ -244,7 +244,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
     'w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-green/40';
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       {actionError && (
         <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
           {actionError}
@@ -252,7 +252,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
       )}
 
       {/* Tabs + top-level actions */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1 w-fit">
           <button className={tabCls('memberships')} onClick={() => setTab('memberships')}>
             Memberships
@@ -322,9 +322,9 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
 
       {/* Memberships tab */}
       {tab === 'memberships' && (
-        <div className="space-y-3">
+        <div className="flex flex-col flex-1 min-h-0 space-y-3">
           {/* Search + status filter */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-shrink-0">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text3 pointer-events-none" />
               <input
@@ -353,7 +353,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
           </div>
 
           <div
-            className="bg-surface border border-border rounded-lg overflow-hidden"
+            className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0"
             role="region"
             aria-label="Memberships list"
             aria-busy={isLoading}
@@ -371,146 +371,131 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                 }
               />
             ) : (
-              <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
-                <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
-                  <tr>
-                    <th className="text-left px-4 py-3">Member</th>
-                    <th className="text-left px-4 py-3">Plan</th>
-                    <th className="text-left px-4 py-3">Price</th>
-                    <th className="text-left px-4 py-3">Status</th>
-                    <th className="text-left px-4 py-3">Start</th>
-                    <th className="text-left px-4 py-3">End</th>
-                    <th className="text-left px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                {memberships.map((m) => {
-                  const isBusy = busy === m.id;
-                  const canActivate = m.status === 'PENDING_PAYMENT';
-                  const canFreeze = m.status === 'ACTIVE';
-                  const canUnfreeze = m.status === 'FROZEN';
-                  const canChangePlan =
-                    m.status !== 'CANCELLED' &&
-                    m.status !== 'EXPIRED' &&
-                    activePlans.some((p) => p.id !== m.planId);
-                  const canCancel = m.status !== 'CANCELLED' && m.status !== 'EXPIRED';
-                  return (
-                    <tr
-                      key={m.id}
-                      onClick={() => router.push(`/members/${m.memberId}`)}
-                      className="border-t border-border hover:bg-surface2/60 transition-colors cursor-pointer"
-                    >
-                      <td className="px-4 py-3 font-medium text-text">
-                        {m.member.fullName}
-                      </td>
-                      <td className="px-4 py-3 text-text2">{m.plan.nameEn}</td>
-                      <td className="px-4 py-3 text-text tabular-nums">{fmtAed(m.plan.priceAed)}</td>
-                      <td className="px-4 py-3"><StatusBadge status={m.status} /></td>
-                      <td className="px-4 py-3 text-text2 tabular-nums">{fmtDate(m.startDate)}</td>
-                      <td className="px-4 py-3 text-text2 tabular-nums">{fmtDate(m.endDate)}</td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center justify-end gap-2">
-                          {canActivate && (
-                            <button
-                              disabled={isBusy}
-                              onClick={() => void doAction(m.id, 'activate')}
-                              className="text-xs font-medium text-green hover:underline disabled:opacity-40"
-                            >
-                              Mark paid
-                            </button>
-                          )}
-                          <button
-                            disabled={isBusy}
-                            onClick={(e) => { setMenuAnchorRect(e.currentTarget.getBoundingClientRect()); setOpenMenuId(openMenuId === m.id ? null : m.id); }}
-                            className="p-1.5 rounded-md hover:bg-surface2 text-text3 hover:text-text disabled:opacity-40 transition-colors"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          {openMenuId === m.id && menuAnchorRect && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-40"
-                                onClick={() => setOpenMenuId(null)}
-                              />
-                              <div
-                                className="fixed z-50 min-w-[160px] rounded-lg border border-border bg-surface shadow-lg py-1"
-                                style={{ top: menuAnchorRect.bottom + 4, right: window.innerWidth - menuAnchorRect.right }}
-                              >
-                                {canActivate && (
-                                  <button
-                                    className="w-full text-left px-3 py-1.5 text-sm text-green hover:bg-surface2 transition-colors"
-                                    onClick={() => { setOpenMenuId(null); void doAction(m.id, 'activate'); }}
-                                  >
-                                    Activate
-                                  </button>
-                                )}
-                                {canFreeze && (
-                                  <button
-                                    className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      setFreezeTarget({ membershipId: m.id, memberName: m.member.fullName });
-                                      setFreezeForm({ startDate: '', endDate: '', reason: '' });
-                                    }}
-                                  >
-                                    Freeze
-                                  </button>
-                                )}
-                                {canUnfreeze && (
-                                  <button
-                                    className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
-                                    onClick={() => { setOpenMenuId(null); void doAction(m.id, 'unfreeze'); }}
-                                  >
-                                    Unfreeze
-                                  </button>
-                                )}
-                                {canChangePlan && (
-                                  <button
-                                    className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors flex items-center gap-1.5"
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      setChangePlanTarget({
-                                        membershipId: m.id,
-                                        memberName: m.member.fullName,
-                                        currentPlanName: m.plan.nameEn,
-                                      });
-                                      setNewPlanId('');
-                                      setChangePlanStart('');
-                                    }}
-                                  >
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                    Change plan
-                                  </button>
-                                )}
-                                {canCancel && (
-                                  <>
-                                    {(canActivate || canFreeze || canUnfreeze || canChangePlan) && (
-                                      <div className="my-1 border-t border-border" />
-                                    )}
-                                    <button
-                                      className="w-full text-left px-3 py-1.5 text-sm text-error hover:bg-error/5 transition-colors"
-                                      onClick={() => { setOpenMenuId(null); setCancelTarget(m); }}
-                                    >
-                                      Cancel membership
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </td>
+              <>
+                {/* Header table — fixed */}
+                <table className="w-full text-sm table-fixed flex-shrink-0">
+                  <thead>
+                    <tr className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                      <th className="text-left px-4 py-3 w-[20%]">Member</th>
+                      <th className="text-left px-4 py-3 w-[15%]">Plan</th>
+                      <th className="text-left px-4 py-3 w-[12%]">Price</th>
+                      <th className="text-left px-4 py-3 w-[12%]">Status</th>
+                      <th className="text-left px-4 py-3 w-[12%]">Start</th>
+                      <th className="text-left px-4 py-3 w-[12%]">End</th>
+                      <th className="text-left px-4 py-3 w-[17%]">Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                </table>
+                {/* Body — scrollable */}
+                <div className={`transition-opacity duration-200 flex-1 min-h-0 overflow-y-auto ${isLoading ? 'opacity-50' : ''}`}>
+                  <table className="w-full text-sm table-fixed">
+                    <tbody>
+                    {memberships.map((m) => {
+                      const isBusy = busy === m.id;
+                      return (
+                        <tr
+                          key={m.id}
+                          onClick={() => router.push(`/members/${m.memberId}`)}
+                          className="border-t border-border hover:bg-surface2/60 transition-colors cursor-pointer"
+                        >
+                          <td className="px-4 py-3 font-medium text-text w-[20%]">
+                            {m.member.fullName}
+                          </td>
+                          <td className="px-4 py-3 text-text2 w-[15%]">{m.plan.nameEn}</td>
+                          <td className="px-4 py-3 text-text tabular-nums w-[12%]">{fmtAed(m.plan.priceAed)}</td>
+                          <td className="px-4 py-3 w-[12%]"><StatusBadge status={m.status} /></td>
+                          <td className="px-4 py-3 text-text2 tabular-nums w-[12%]">{fmtDate(m.startDate)}</td>
+                          <td className="px-4 py-3 text-text2 tabular-nums w-[12%]">{fmtDate(m.endDate)}</td>
+                          <td className="px-4 py-3 w-[17%]" onClick={(e) => e.stopPropagation()}>
+                            <div className="relative flex items-center justify-end gap-2">
+                              {m.status === 'PENDING_PAYMENT' && (
+                                <button
+                                  disabled={isBusy}
+                                  onClick={() => void doAction(m.id, 'activate')}
+                                  className="text-xs font-medium text-green hover:underline disabled:opacity-40"
+                                >
+                                  Mark paid
+                                </button>
+                              )}
+                              <button
+                                disabled={isBusy}
+                                onClick={(e) => { setMenuAnchorRect(e.currentTarget.getBoundingClientRect()); setOpenMenuId(openMenuId === m.id ? null : m.id); }}
+                                className="p-1.5 rounded-md hover:bg-surface2 text-text3 hover:text-text disabled:opacity-40 transition-colors"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                              {openMenuId === m.id && menuAnchorRect && (
+                                <>
+                                  <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+                                  <div
+                                    className="fixed z-50 min-w-[160px] rounded-lg border border-border bg-surface shadow-lg py-1"
+                                    style={{ top: menuAnchorRect.bottom + 4, right: window.innerWidth - menuAnchorRect.right }}
+                                  >
+                                    {m.status === 'PENDING_PAYMENT' && (
+                                      <button
+                                        className="w-full text-left px-3 py-1.5 text-sm text-green hover:bg-surface2 transition-colors"
+                                        onClick={() => { setOpenMenuId(null); void doAction(m.id, 'activate'); }}
+                                      >Activate</button>
+                                    )}
+                                    {m.status === 'ACTIVE' && (
+                                      <button
+                                        className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
+                                        onClick={() => {
+                                          setOpenMenuId(null);
+                                          setFreezeTarget({ membershipId: m.id, memberName: m.member.fullName });
+                                          setFreezeForm({ startDate: '', endDate: '', reason: '' });
+                                        }}
+                                      >Freeze</button>
+                                    )}
+                                    {m.status === 'FROZEN' && (
+                                      <button
+                                        className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors"
+                                        onClick={() => { setOpenMenuId(null); void doAction(m.id, 'unfreeze'); }}
+                                      >Unfreeze</button>
+                                    )}
+                                    {m.status !== 'CANCELLED' && m.status !== 'EXPIRED' && activePlans.some((p) => p.id !== m.planId) && (
+                                      <button
+                                        className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors flex items-center gap-1.5"
+                                        onClick={() => {
+                                          setOpenMenuId(null);
+                                          setChangePlanTarget({ membershipId: m.id, memberName: m.member.fullName, currentPlanName: m.plan.nameEn });
+                                          setNewPlanId('');
+                                          setChangePlanStart('');
+                                        }}
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                        Change plan
+                                      </button>
+                                    )}
+                                    {m.status !== 'CANCELLED' && m.status !== 'EXPIRED' && (
+                                      <>
+                                        {(m.status === 'PENDING_PAYMENT' || m.status === 'ACTIVE' || m.status === 'FROZEN' || (m.status !== 'CANCELLED' && m.status !== 'EXPIRED' && activePlans.some((p) => p.id !== m.planId))) && (
+                                          <div className="my-1 border-t border-border" />
+                                        )}
+                                        <button
+                                          className="w-full text-left px-3 py-1.5 text-sm text-error hover:bg-error/5 transition-colors"
+                                          onClick={() => { setOpenMenuId(null); setCancelTarget(m); }}
+                                        >Cancel membership</button>
+                                      </>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
           </div>
 
           {/* Pagination */}
           {!isLoading && total > 0 && (
-            <div className="flex items-center justify-between text-sm text-text2 px-1">
+            <div className="flex items-center justify-between text-sm text-text2 px-1 flex-shrink-0">
               <span>{rangeStart}–{rangeEnd} of {total} memberships</span>
               <div className="flex items-center gap-2">
                 <button
@@ -542,18 +527,18 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
 
       {/* Plans tab */}
       {tab === 'renewals' && (
-        <div className="space-y-3">
+        <div className="flex flex-col flex-1 min-h-0 space-y-3">
           {renewalsError && (
-            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
+            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20 flex-shrink-0">
               {renewalsError}
             </div>
           )}
           {renewalsResult && (
-            <div className="rounded-md bg-green/5 text-green text-sm px-4 py-3 ring-1 ring-green/20">
+            <div className="rounded-md bg-green/5 text-green text-sm px-4 py-3 ring-1 ring-green/20 flex-shrink-0">
               Sweep complete — created {renewalsResult.created} renewal(s), skipped {renewalsResult.skipped}, failed {renewalsResult.failed} (of {renewalsResult.due} due).
             </div>
           )}
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0">
             {upcomingRenewals.length === 0 ? (
               <EmptyState
                 icon={RefreshCw}
@@ -561,45 +546,51 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                 description="Memberships on auto-renew plans will appear here 30 days before their renewal date."
               />
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
-                  <tr>
-                    <th className="text-left px-4 py-3">Member</th>
-                    <th className="text-left px-4 py-3">Plan</th>
-                    <th className="text-left px-4 py-3">Renewal starts</th>
-                    <th className="text-left px-4 py-3">Ends</th>
-                    <th className="text-left px-4 py-3">Amount</th>
-                    <th className="text-left px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {upcomingRenewals.map((r) => {
-                    const isBusy = busy === r.id;
-                    return (
-                      <tr
-                        key={r.id}
-                        onClick={() => router.push(`/members/${r.memberId}`)}
-                        className="border-t border-border hover:bg-surface2/60 transition-colors cursor-pointer"
-                      >
-                        <td className="px-4 py-3 font-medium text-text">{r.member.fullName}</td>
-                        <td className="px-4 py-3 text-text2">{r.plan.nameEn}</td>
-                        <td className="px-4 py-3 text-text2 tabular-nums">{fmtDate(r.startDate)}</td>
-                        <td className="px-4 py-3 text-text2 tabular-nums">{fmtDate(r.endDate)}</td>
-                        <td className="px-4 py-3 text-text tabular-nums">{fmtAed(r.plan.priceAed)}</td>
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            disabled={isBusy}
-                            onClick={() => void doAction(r.id, 'activate')}
-                            className="px-2.5 py-1 text-xs rounded-md bg-green/10 text-green hover:bg-green/20 disabled:opacity-40 transition-colors font-medium"
+              <>
+                <table className="w-full text-sm table-fixed flex-shrink-0">
+                  <thead>
+                    <tr className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                      <th className="text-left px-4 py-3">Member</th>
+                      <th className="text-left px-4 py-3">Plan</th>
+                      <th className="text-left px-4 py-3">Renewal starts</th>
+                      <th className="text-left px-4 py-3">Ends</th>
+                      <th className="text-left px-4 py-3">Amount</th>
+                      <th className="text-left px-4 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                </table>
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <table className="w-full text-sm table-fixed">
+                    <tbody>
+                      {upcomingRenewals.map((r) => {
+                        const isBusy = busy === r.id;
+                        return (
+                          <tr
+                            key={r.id}
+                            onClick={() => router.push(`/members/${r.memberId}`)}
+                            className="border-t border-border hover:bg-surface2/60 transition-colors cursor-pointer"
                           >
-                            {isBusy ? 'Activating…' : 'Activate'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            <td className="px-4 py-3 font-medium text-text">{r.member.fullName}</td>
+                            <td className="px-4 py-3 text-text2">{r.plan.nameEn}</td>
+                            <td className="px-4 py-3 text-text2 tabular-nums">{fmtDate(r.startDate)}</td>
+                            <td className="px-4 py-3 text-text2 tabular-nums">{fmtDate(r.endDate)}</td>
+                            <td className="px-4 py-3 text-text tabular-nums">{fmtAed(r.plan.priceAed)}</td>
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                disabled={isBusy}
+                                onClick={() => void doAction(r.id, 'activate')}
+                                className="px-2.5 py-1 text-xs rounded-md bg-green/10 text-green hover:bg-green/20 disabled:opacity-40 transition-colors font-medium"
+                              >
+                                {isBusy ? 'Activating…' : 'Activate'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -607,7 +598,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
 
       {/* Plans tab */}
       {tab === 'plans' && (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0">
           {plans.length === 0 ? (
             <EmptyState
               icon={FileText}
@@ -615,53 +606,59 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
               description="Create your first membership plan to start assigning them to members."
             />
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Price</th>
-                  <th className="text-left px-4 py-3">Duration</th>
-                  <th className="text-left px-4 py-3">Classes</th>
-                  <th className="text-left px-4 py-3">Freeze days</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                  <th className="text-left px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plans.map((p) => (
-                  <tr key={p.id} className="border-t border-border hover:bg-surface2/60 transition-colors">
-                    <td className="px-4 py-3 font-medium text-text">{p.nameEn}</td>
-                    <td className="px-4 py-3 text-text tabular-nums">{fmtAed(p.priceAed)}</td>
-                    <td className="px-4 py-3 text-text2">{p.durationDays}d</td>
-                    <td className="px-4 py-3 text-text2">{p.includesClasses ? 'Yes' : 'No'}</td>
-                    <td className="px-4 py-3 text-text2">{p.maxFreezeDays}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.active ? 'bg-green/10 text-green' : 'bg-border/40 text-text3'}`}>
-                        {p.active ? 'Active' : 'Archived'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => { setEditingPlan(p); setShowPlanForm(true); }}
-                          className="px-2.5 py-1 text-xs rounded-md bg-surface2 text-text2 hover:bg-border/40 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        {p.active && (
-                          <button
-                            onClick={() => setArchiveTarget(p)}
-                            className="px-2.5 py-1 text-xs rounded-md bg-error/10 text-error hover:bg-error/20 transition-colors"
-                          >
-                            Archive
-                          </button>
-                        )}
-                      </div>
-                    </td>
+            <>
+              <table className="w-full text-sm table-fixed flex-shrink-0">
+                <thead>
+                  <tr className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                    <th className="text-left px-4 py-3">Name</th>
+                    <th className="text-left px-4 py-3">Price</th>
+                    <th className="text-left px-4 py-3">Duration</th>
+                    <th className="text-left px-4 py-3">Classes</th>
+                    <th className="text-left px-4 py-3">Freeze days</th>
+                    <th className="text-left px-4 py-3">Status</th>
+                    <th className="text-left px-4 py-3">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+              </table>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <table className="w-full text-sm table-fixed">
+                  <tbody>
+                    {plans.map((p) => (
+                      <tr key={p.id} className="border-t border-border hover:bg-surface2/60 transition-colors">
+                        <td className="px-4 py-3 font-medium text-text">{p.nameEn}</td>
+                        <td className="px-4 py-3 text-text tabular-nums">{fmtAed(p.priceAed)}</td>
+                        <td className="px-4 py-3 text-text2">{p.durationDays}d</td>
+                        <td className="px-4 py-3 text-text2">{p.includesClasses ? 'Yes' : 'No'}</td>
+                        <td className="px-4 py-3 text-text2">{p.maxFreezeDays}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.active ? 'bg-green/10 text-green' : 'bg-border/40 text-text3'}`}>
+                            {p.active ? 'Active' : 'Archived'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => { setEditingPlan(p); setShowPlanForm(true); }}
+                              className="px-2.5 py-1 text-xs rounded-md bg-surface2 text-text2 hover:bg-border/40 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            {p.active && (
+                              <button
+                                onClick={() => setArchiveTarget(p)}
+                                className="px-2.5 py-1 text-xs rounded-md bg-error/10 text-error hover:bg-error/20 transition-colors"
+                              >
+                                Archive
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

@@ -35,13 +35,15 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
   ]);
 
   return (
-    <MessagesClient
-      messagesPage={msgsRes.data ?? { items: [], total: 0, page: 1, pageSize: PAGE_SIZE }}
-      initialError={msgsRes.error}
-      initialSearch={search}
-      initialStatus={status}
-      initialFrom={from}
+    <div className="flex flex-col flex-1 min-h-0">
+      <MessagesClient
+        messagesPage={msgsRes.data ?? { items: [], total: 0, page: 1, pageSize: PAGE_SIZE }}
+        initialError={msgsRes.error}
+        initialSearch={search}
+        initialStatus={status}
+        initialFrom={from}
       initialTo={to}
     />
+    </div>
   );
 }

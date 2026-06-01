@@ -222,7 +222,7 @@ describe('PlanFormModal', () => {
       await waitFor(() => {
         const patchCall = fetchSpy.mock.calls.find(
           (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('membership-plans/p1'),
-        );
+        ) as unknown[] | undefined;
         expect(patchCall).toBeDefined();
         expect(patchCall![1]).toMatchObject({ method: 'PATCH' });
       });
@@ -244,9 +244,9 @@ describe('PlanFormModal', () => {
       await waitFor(() => {
         const postCall = fetchSpy.mock.calls.find(
           (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('membership-plans') && !call[0].includes('p1'),
-        );
+        ) as unknown[] | undefined;
         expect(postCall).toBeDefined();
-        const body = JSON.parse(postCall![1]!.body as string);
+        const body = JSON.parse((postCall![1] as RequestInit).body as string);
         expect(body.nameEn).toBe('Silver Plan');
         expect(body.priceAed).toBe(1500);
         expect(body.durationDays).toBe(60);

@@ -364,7 +364,7 @@ export function BillingClient({
           </div>
 
           <div
-            className="bg-surface border border-border rounded-lg overflow-hidden"
+            className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
             role="region"
             aria-label="Invoices list"
             aria-busy={isLoading}
@@ -376,7 +376,7 @@ export function BillingClient({
             ) : (
               <>
                 <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
-                  <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                  <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                     <tr>
                       <th className="text-left px-4 py-3">Member</th>
                       <th className="text-left px-4 py-3">Amount</th>
@@ -435,7 +435,7 @@ export function BillingClient({
           {salaryLoading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-text3 animate-spin" /></div>
           ) : (
-            <div className="space-y-4">
+            <div className="flex flex-col flex-1 min-h-0 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-text2 mb-1.5">Start Day</label>

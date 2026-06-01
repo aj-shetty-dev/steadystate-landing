@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClassTypeFormModal } from '../class-type-form-modal';
@@ -202,7 +202,7 @@ describe('ClassTypeFormModal', () => {
       await waitFor(() => {
         const patchCall = fetchSpy.mock.calls.find(
           (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('classes/types/ct1'),
-        );
+        ) as unknown[] | undefined;
         expect(patchCall).toBeDefined();
         expect(patchCall![1]).toMatchObject({ method: 'PATCH' });
       });
@@ -232,9 +232,9 @@ describe('ClassTypeFormModal', () => {
       await waitFor(() => {
         const postCall = fetchSpy.mock.calls.find(
           (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('classes/types') && !call[0].includes('ct1'),
-        );
+        ) as unknown[] | undefined;
         expect(postCall).toBeDefined();
-        const body = JSON.parse(postCall![1]!.body as string);
+        const body = JSON.parse((postCall![1] as RequestInit).body as string);
         expect(body.nameEn).toBe('HIIT');
         expect(body.nameAr).toBe('هيت');
         expect(body.description).toBe('High intensity');

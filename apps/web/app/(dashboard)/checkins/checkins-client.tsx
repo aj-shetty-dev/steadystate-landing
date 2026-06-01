@@ -24,7 +24,7 @@ export function CheckinsClient({ items }: Props) {
   useEffect(() => { setIsLoading(false); }, [items]);
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       <PageHeader
         title="Check-ins"
         description="Latest 200 check-ins via kiosk, QR, or manual entry."
@@ -40,7 +40,7 @@ export function CheckinsClient({ items }: Props) {
         }
       />
       <div
-        className="bg-surface border border-border rounded-lg overflow-hidden"
+        className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
         role="region"
         aria-label="Check-ins list"
         aria-busy={isLoading}
@@ -55,7 +55,7 @@ export function CheckinsClient({ items }: Props) {
           />
         ) : (
           <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
-            <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+            <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3">When</th>
                 <th className="text-left px-4 py-3">Member ID</th>

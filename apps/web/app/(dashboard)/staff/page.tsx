@@ -10,9 +10,11 @@ export default async function StaffPage() {
   ]);
 
   return (
-    <StaffClient
-      staff={staffRes.data ?? []}
-      initialError={staffRes.error}
-    />
+    <div className="flex flex-col flex-1 min-h-0">
+      <StaffClient
+        staff={staffRes.data ?? []}
+        initialError={staffRes.error}
+      />
+    </div>
   );
 }

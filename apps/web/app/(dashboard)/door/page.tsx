@@ -19,15 +19,15 @@ export default async function DoorPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       <PageHeader title="Door events" description="Live access logs and behavioural signals from biometric/door hardware." />
       {err && <Alert>{err}</Alert>}
 
       <section>
         <h2 className="text-base font-semibold tracking-tight text-text mb-3">Recent signals</h2>
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
           <table className="w-full text-sm">
-            <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+            <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3">Kind</th>
                 <th className="text-left px-4 py-3">Member</th>
@@ -56,9 +56,9 @@ export default async function DoorPage() {
 
       <section>
         <h2 className="text-base font-semibold tracking-tight text-text mb-3">Recent events</h2>
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
           <table className="w-full text-sm">
-            <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+            <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3">Direction</th>
                 <th className="text-left px-4 py-3">Source</th>

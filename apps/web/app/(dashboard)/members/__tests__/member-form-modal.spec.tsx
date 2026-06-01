@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberFormModal } from '../member-form-modal';
@@ -11,6 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 function mockFetch(overrides: Partial<Response> & { json?: () => Promise<unknown> } = {}) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fn = vi.fn(async (_url: string, _opts?: RequestInit) => {
     return {
       ok: true,
@@ -70,10 +71,9 @@ function renderEdit() {
 }
 
 describe('MemberFormModal', () => {
-  let fetchMock: ReturnType<typeof mockFetch>;
-
   beforeEach(() => {
-    fetchMock = mockFetch({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _fetchMock = mockFetch({
       json: async () => staffList,
     });
     // Second call for plans
@@ -297,6 +297,7 @@ describe('MemberFormModal', () => {
     });
 
     it('includes emergencyContact and assignedTrainerId in payload when provided', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('membership-plans')) {
           return { ok: true, json: async () => planList } as Response;

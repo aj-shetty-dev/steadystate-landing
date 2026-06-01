@@ -32,6 +32,23 @@ function friendlyNetworkMessage(err: unknown): string {
   return 'A network error occurred. Please check your connection and try again.';
 }
 
+/**
+ * Forward browser cookies from the incoming request to the server-side fetch.
+ * This is needed because Server Components make server-to-server HTTP calls
+ * to API routes, but those internal calls don't automatically carry cookies.
+ */
+async function getServerCookies(): Promise<string | null> {
+  try {
+    const { cookies } = await import('next/headers');
+    const store = await cookies();
+    const all = store.getAll();
+    if (all.length === 0) return null;
+    return all.map((c) => `${c.name}=${c.value}`).join('; ');
+  } catch {
+    return null; // Not in a request context (e.g. build time)
+  }
+}
+
 async function apiFetchOnce<T>(
   path: string,
   init: RequestInit,
@@ -44,15 +61,29 @@ async function apiFetchOnce<T>(
   const cacheInit: RequestInit & { next?: { revalidate: number } } =
     revalidate !== undefined ? { next: { revalidate } } : { cache: 'no-store' };
 
+  const url = `${API_URL}/api${path}`;
+  const isServer = typeof window === 'undefined';
+
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api${path}`, {
+    const fetchUrl = isServer ? `http://localhost:3000${url}` : url;
+    const fetchInit: RequestInit = {
       ...init,
       headers,
-      credentials: 'include',
       ...cacheInit,
-    });
+    };
+    if (isServer) {
+      // Forward browser cookies to the internal API call so Clerk auth works
+      const cookieHeader = await getServerCookies();
+      if (cookieHeader) {
+        fetchInit.headers = { ...fetchInit.headers, Cookie: cookieHeader };
+      }
+    } else {
+      fetchInit.credentials = 'include';
+    }
+    res = await fetch(fetchUrl, fetchInit);
   } catch (err) {
+    console.error(`[apiFetch] ❌ fetch threw:`, err);
     throw new ApiError(0, friendlyNetworkMessage(err));
   }
 

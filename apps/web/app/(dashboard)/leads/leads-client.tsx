@@ -253,7 +253,7 @@ export function LeadsClient({ leads: initialLeads, initialError }: Props) {
   const groupMap = grouped();
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       <PageHeader
         title="Leads"
         description={

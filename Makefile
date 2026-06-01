@@ -14,6 +14,9 @@ help: ## Show this help
 dev: ## Start Next.js app on :3000
 	pnpm --filter @steady-state/web dev
 
+vercel-dev: ## Run vercel dev (from apps/web)
+	cd apps/web && vercel dev
+
 web: dev ## Alias for dev
 
 # ── quality ──────────────────────────────────────────────────────────────────

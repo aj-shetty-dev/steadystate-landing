@@ -209,7 +209,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             <History className="w-4 h-4 text-text3" />
             Membership history
           </h2>
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
             <table className="w-full text-sm">
               <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                 <tr>
@@ -245,7 +245,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         {bookingsResult.status === 'rejected' && <Alert>Could not load class bookings.</Alert>}
         {bookingsResult.status === 'fulfilled' && (
           <div className="space-y-4">
-            <div className="bg-surface border border-border rounded-lg overflow-hidden">
+            <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
               <div className="px-4 py-2 bg-surface2/40 border-b border-border">
                 <p className="text-xs font-medium text-text3 uppercase tracking-wider">Upcoming ({upcomingBookings.length})</p>
               </div>
@@ -279,7 +279,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             </div>
 
             {pastBookings.length > 0 && (
-              <div className="bg-surface border border-border rounded-lg overflow-hidden">
+              <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
                 <div className="px-4 py-2 bg-surface2/40 border-b border-border">
                   <p className="text-xs font-medium text-text3 uppercase tracking-wider">Recent history ({pastBookings.length})</p>
                 </div>
@@ -314,7 +314,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           <Alert>Could not load check-ins.</Alert>
         )}
         {checkinsResult.status === 'fulfilled' && (
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
             {checkins!.length === 0 ? (
               <EmptyState icon={ScanLine} title="No check-ins yet" description="This member hasn't checked in." />
             ) : (
@@ -346,7 +346,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           <Alert>Could not load invoices.</Alert>
         )}
         {invoicesResult.status === 'fulfilled' && (
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
             {invoices!.length === 0 ? (
               <EmptyState icon={FileText} title="No invoices" description="No invoices have been raised for this member." />
             ) : (

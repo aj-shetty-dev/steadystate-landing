@@ -10,9 +10,11 @@ export default async function LeadsPage() {
   ]);
 
   return (
-    <LeadsClient
-      leads={leadsRes.data ?? []}
-      initialError={leadsRes.error}
-    />
+    <div className="flex flex-col flex-1 min-h-0">
+      <LeadsClient
+        leads={leadsRes.data ?? []}
+        initialError={leadsRes.error}
+      />
+    </div>
   );
 }

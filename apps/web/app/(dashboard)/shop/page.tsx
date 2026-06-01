@@ -23,7 +23,7 @@ export default async function ShopPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       <PageHeader title="Shop" description="In-app supplement store with VAT-aware pricing." />
       {err && <Alert>{err}</Alert>}
 
@@ -53,9 +53,9 @@ export default async function ShopPage() {
 
       <section>
         <h2 className="text-base font-semibold tracking-tight text-text mb-3">Recent orders</h2>
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
           <table className="w-full text-sm">
-            <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+            <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3">Order</th>
                 <th className="text-left px-4 py-3">Status</th>

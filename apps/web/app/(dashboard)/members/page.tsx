@@ -27,9 +27,9 @@ export default async function MembersPage({
   }
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       {error && (
-        <div className="mb-4">
+        <div className="mb-4 flex-shrink-0">
           <Alert>{error}</Alert>
         </div>
       )}

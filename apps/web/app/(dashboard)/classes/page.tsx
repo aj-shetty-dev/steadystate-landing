@@ -50,7 +50,7 @@ export default async function ClassesPage({
   const error = failed > 0 ? 'Some data could not be loaded. Refresh to retry.' : null;
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       <PageHeader title="Classes" description="Schedule sessions, manage class types, and set up recurring schedules." />
       {error && (
         <div className="mb-4">

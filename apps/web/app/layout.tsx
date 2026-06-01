@@ -28,6 +28,7 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'SteadyState — The Smart Gym Platform for UAE Operators',
   description: 'The intelligence layer for UAE gym operators.',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -35,8 +36,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <ClerkProvider
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      afterSignInUrl="/overview"
-      afterSignUpUrl="/onboarding"
+      signInFallbackRedirectUrl="/overview"
+      signUpFallbackRedirectUrl="/onboarding"
     >
       <html
         lang="en"

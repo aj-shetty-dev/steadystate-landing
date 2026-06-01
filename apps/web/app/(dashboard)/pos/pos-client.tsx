@@ -269,7 +269,7 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       {/* Header: daily summary + view toggle */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -655,7 +655,7 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
 
       {/* ═══ HISTORY VIEW ═══ */}
       {view === 'history' && (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
           {recentSales.length === 0 ? (
             <EmptyState
               icon={Receipt}
@@ -665,7 +665,7 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3">When</th>
                     <th className="text-left px-4 py-3">Type</th>

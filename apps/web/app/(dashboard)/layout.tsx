@@ -8,9 +8,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!user) redirect('/onboarding');
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen">
       <Sidebar user={user} />
-      <main className="flex-1 px-8 py-8 overflow-x-auto">{children}</main>
+      <main className="flex-1 px-8 py-8 flex flex-col overflow-hidden">{children}</main>
     </div>
   );
 }

@@ -29,11 +29,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   ]);
 
   return (
-    <BillingClient
-      invoicesPage={invoicesRes.data ?? { items: [], total: 0, page: 1, pageSize: PAGE_SIZE }}
-      initialError={invoicesRes.error}
-      initialSearch={search}
-      initialStatus={status}
-    />
+    <div className="flex flex-col flex-1 min-h-0">
+      <BillingClient
+        invoicesPage={invoicesRes.data ?? { items: [], total: 0, page: 1, pageSize: PAGE_SIZE }}
+        initialError={invoicesRes.error}
+        initialSearch={search}
+        initialStatus={status}
+      />
+    </div>
   );
 }

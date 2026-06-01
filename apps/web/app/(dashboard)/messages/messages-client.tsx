@@ -194,7 +194,7 @@ export function MessagesClient({
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       <PageHeader
         title="Messages"
         description="Send manual WhatsApp messages and view outbound message history."
@@ -265,7 +265,7 @@ export function MessagesClient({
 
       {/* Messages Table */}
       <div
-        className="bg-surface border border-border rounded-lg overflow-hidden"
+        className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
         role="region"
         aria-label="Messages list"
         aria-busy={isLoading}
@@ -281,7 +281,7 @@ export function MessagesClient({
         ) : (
           <>
             <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
-              <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+              <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                 <tr>
                   <th className="text-left px-4 py-3">To</th>
                   <th className="text-left px-4 py-3">Body</th>

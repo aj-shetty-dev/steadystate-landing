@@ -205,9 +205,9 @@ export function ClassesClient({
     : types;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       {/* Tab bar + top actions */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 flex-wrap flex-shrink-0">
         <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
           <button className={tabCls('sessions')} onClick={() => setTab('sessions')}>
             <span className="flex items-center gap-1.5">
@@ -260,15 +260,15 @@ export function ClassesClient({
 
       {/* ── Sessions tab ── */}
       {tab === 'sessions' && (
-        <div className="space-y-3">
+        <div className="flex flex-col flex-1 min-h-0 space-y-3">
           {sessionError && (
-            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
+            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20 flex-shrink-0">
               {sessionError}
             </div>
           )}
 
           {/* Filters row */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap flex-shrink-0">
             {/* Date presets */}
             <div className="flex items-center gap-1">
               {DATE_PRESETS.map((p) => (
@@ -355,7 +355,7 @@ export function ClassesClient({
 
           {/* Sessions table */}
           <div
-            className="bg-surface border border-border rounded-lg overflow-hidden"
+            className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
             role="region"
             aria-label="Sessions list"
             aria-busy={isLoading}
@@ -370,7 +370,7 @@ export function ClassesClient({
               />
             ) : (
               <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
-                <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3">When</th>
                     <th className="text-left px-4 py-3">Class</th>
@@ -468,14 +468,14 @@ export function ClassesClient({
 
       {/* ── Class Types tab ── */}
       {tab === 'types' && (
-        <div className="space-y-3">
+        <div className="flex flex-col flex-1 min-h-0 space-y-3">
           {typeError && (
-            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
+            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20 flex-shrink-0">
               {typeError}
             </div>
           )}
 
-          <div className="relative max-w-sm">
+          <div className="relative max-w-sm flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text3 pointer-events-none" />
             <input
               type="search"
@@ -486,7 +486,7 @@ export function ClassesClient({
             />
           </div>
 
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
             {filteredTypes.length === 0 ? (
               <EmptyState
                 icon={ListChecks}
@@ -495,7 +495,7 @@ export function ClassesClient({
               />
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3">Name</th>
                     <th className="text-left px-4 py-3">Duration</th>
@@ -587,14 +587,14 @@ export function ClassesClient({
 
       {/* ── Recurrences tab ── */}
       {tab === 'recurrences' && (
-        <div className="space-y-3">
+        <div className="flex flex-col flex-1 min-h-0 space-y-3">
           {recError && (
-            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
+            <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20 flex-shrink-0">
               {recError}
             </div>
           )}
 
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
             {recurrences.length === 0 ? (
               <EmptyState
                 icon={CalendarRange}
@@ -603,7 +603,7 @@ export function ClassesClient({
               />
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                   <tr>
                     <th className="text-left px-4 py-3">Class</th>
                     <th className="text-left px-4 py-3">Days</th>

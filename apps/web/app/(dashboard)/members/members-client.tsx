@@ -210,7 +210,7 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
       />
 
       {/* Status filter tabs */}
-      <div className="mb-4 flex items-center gap-1 border-b border-border overflow-x-auto">
+      <div className="mb-4 flex items-center gap-1 border-b border-border flex-wrap">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -238,7 +238,7 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
       </div>
 
       <div
-        className="bg-surface border border-border rounded-lg overflow-hidden"
+        className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0"
         role="region"
         aria-label="Members list"
         aria-busy={isLoading}
@@ -263,67 +263,73 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
             )}
           </div>
         ) : (
-          <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50' : 'animate-fade-in'}`}>
-            <table className="w-full text-sm">
-              <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Phone</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                  <th className="text-left px-4 py-3">Plan</th>
-                  <th className="text-left px-4 py-3">Provider</th>
-                  <th className="text-left px-4 py-3">Last check-in</th>
-                  <th className="text-left px-4 py-3">Joined</th>
-                  <th className="px-4 py-3" />
+          <>
+            {/* Header — fixed, no scrollbar */}
+            <table className="w-full text-sm table-fixed flex-shrink-0">
+              <thead>
+                <tr className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+                  <th className="text-left px-4 py-3 w-[25%]">Name</th>
+                  <th className="text-left px-4 py-3 w-[15%]">Phone</th>
+                  <th className="text-left px-4 py-3 w-[10%]">Status</th>
+                  <th className="text-left px-4 py-3 w-[15%]">Plan</th>
+                  <th className="text-left px-4 py-3 w-[10%]">Provider</th>
+                  <th className="text-left px-4 py-3 w-[10%]">Last check-in</th>
+                  <th className="text-left px-4 py-3 w-[10%]">Joined</th>
+                  <th className="px-4 py-3 w-[5%]" />
                 </tr>
               </thead>
-              <tbody>
-                {data.items.map((m) => {
-                  const isCancelled = optimisticCancelled.has(m.id);
-                  return (
-                    <tr
-                      key={m.id}
-                      className={`border-t border-border transition-all duration-300 ${
-                        isCancelled ? 'opacity-40 pointer-events-none' : 'hover:bg-surface2/60'
-                      }`}
-                    >
-                      <td
-                        onClick={() => router.push(`/members/${m.id}`)}
-                        className="px-4 py-3 text-green font-medium cursor-pointer"
-                      >
-                        {m.fullName}
-                      </td>
-                      <td className="px-4 py-3 text-text2 tabular-nums">{m.phone ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={m.membershipStatus} />
-                      </td>
-                      <td className="px-4 py-3 text-text2">
-                        {m.activePlanNames.length > 0
-                          ? m.activePlanNames.join(', ')
-                          : <span className="text-text3">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-text2 capitalize">{m.provider.toLowerCase()}</td>
-                      <td className="px-4 py-3 text-text2 tabular-nums">{fmt(m.lastCheckinAt)}</td>
-                      <td className="px-4 py-3 text-text2 tabular-nums">{fmt(m.joinedAt)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <RowActionsMenu
-                          member={m}
-                          onEdit={() => setEditMember(m)}
-                          onDeactivate={() => setConfirmTarget(m)}
-                          deactivating={deactivating === m.id}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
             </table>
-          </div>
+            {/* Body — scrollable, scrollbar only here */}
+            <div className={`transition-opacity duration-200 flex-1 min-h-0 overflow-y-auto ${isLoading ? 'opacity-50' : 'animate-fade-in'}`}>
+              <table className="w-full text-sm table-fixed">
+                <tbody>
+                  {data.items.map((m) => {
+                    const isCancelled = optimisticCancelled.has(m.id);
+                    return (
+                      <tr
+                        key={m.id}
+                        className={`border-t border-border transition-all duration-300 ${
+                          isCancelled ? 'opacity-40 pointer-events-none' : 'hover:bg-surface2/60'
+                        }`}
+                      >
+                        <td
+                          onClick={() => router.push(`/members/${m.id}`)}
+                          className="px-4 py-3 text-green font-medium cursor-pointer w-[25%]"
+                        >
+                          {m.fullName}
+                        </td>
+                        <td className="px-4 py-3 text-text2 tabular-nums w-[15%]">{m.phone ?? '—'}</td>
+                        <td className="px-4 py-3 w-[10%]">
+                          <StatusBadge status={m.membershipStatus} />
+                        </td>
+                        <td className="px-4 py-3 text-text2 w-[15%]">
+                          {m.activePlanNames.length > 0
+                            ? m.activePlanNames.join(', ')
+                            : <span className="text-text3">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-text2 capitalize w-[10%]">{m.provider.toLowerCase()}</td>
+                        <td className="px-4 py-3 text-text2 tabular-nums w-[10%]">{fmt(m.lastCheckinAt)}</td>
+                        <td className="px-4 py-3 text-text2 tabular-nums w-[10%]">{fmt(m.joinedAt)}</td>
+                        <td className="px-4 py-3 text-right w-[5%]">
+                          <RowActionsMenu
+                            member={m}
+                            onEdit={() => setEditMember(m)}
+                            onDeactivate={() => setConfirmTarget(m)}
+                            deactivating={deactivating === m.id}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Footer: count + pagination */}
         {!isLoading && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface2/40">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface2/40 flex-shrink-0">
             <p className="text-xs text-text3 tabular-nums">
               {data.total === 0
                 ? 'No members'

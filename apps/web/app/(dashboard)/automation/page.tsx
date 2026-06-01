@@ -21,13 +21,13 @@ export default async function AutomationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       <PageHeader title="Automation" description="Churn-trigger engine and signals it has produced." />
       <RunChurnButton />
 
       {error && <Alert>{error}</Alert>}
       {data && (
-        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
           <div className="px-4 py-3 border-b border-border text-sm font-medium text-text">
             Recent churn signals
           </div>
@@ -39,7 +39,7 @@ export default async function AutomationPage() {
             />
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+              <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                 <tr>
                   <th className="text-left px-4 py-3">Member</th>
                   <th className="text-left px-4 py-3">Phone</th>

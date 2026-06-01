@@ -27,6 +27,8 @@ export default function OnboardingPage() {
         setError(body.message ?? 'Onboarding failed');
         return;
       }
+      // Refresh the Clerk session so the new tenantId metadata is in the JWT
+      await user.reload();
       router.push('/overview');
       router.refresh();
     } catch {

@@ -192,7 +192,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
   const displayError = error ?? initialError;
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 min-h-0 space-y-4">
       <PageHeader
         title="Staff"
         description="Trainers, front desk, and managers with kiosk access."
@@ -217,7 +217,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
       )}
 
       <div
-        className="bg-surface border border-border rounded-lg overflow-hidden"
+        className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
         role="region"
         aria-label="Staff list"
         aria-busy={isLoading}
@@ -232,7 +232,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
           />
         ) : (
           <table className={`w-full text-sm transition-opacity duration-200 ${isLoading ? 'opacity-50' : ''}`}>
-            <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
+            <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="text-left px-4 py-3">Name</th>
                 <th className="text-left px-4 py-3">Role</th>

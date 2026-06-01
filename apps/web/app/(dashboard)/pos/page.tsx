@@ -18,13 +18,15 @@ export default async function PosPage() {
   ]);
 
   return (
-    <PosClient
-      products={products.data ?? []}
-      recentSales={sales.data ?? []}
-      dailyTotal={daily.data?._sum?.totalAed ?? 0}
-      dailyCount={daily.data?._count?._all ?? 0}
-      plans={plans.data ?? []}
+    <div className="flex flex-col flex-1 min-h-0">
+      <PosClient
+        products={products.data ?? []}
+        recentSales={sales.data ?? []}
+        dailyTotal={daily.data?._sum?.totalAed ?? 0}
+        dailyCount={daily.data?._count?._all ?? 0}
+        plans={plans.data ?? []}
       initialErrors={[products.error, sales.error, daily.error, plans.error].filter(Boolean) as string[]}
     />
+    </div>
   );
 }

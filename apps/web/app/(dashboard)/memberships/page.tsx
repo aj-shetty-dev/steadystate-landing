@@ -41,16 +41,18 @@ export default async function MembershipsPage({ searchParams }: { searchParams: 
       : null;
 
   return (
-    <div>
-      <PageHeader
-        title="Memberships"
-        description="Manage membership plans and track active assignments."
-      />
-      {error && (
-        <div className="mb-4">
-          <Alert>{error}</Alert>
-        </div>
-      )}
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex-shrink-0">
+        <PageHeader
+          title="Memberships"
+          description="Manage membership plans and track active assignments."
+        />
+        {error && (
+          <div className="mb-4">
+            <Alert>{error}</Alert>
+          </div>
+        )}
+      </div>
       <MembershipsClient
         membershipsPage={membershipsPage}
         plans={plans}

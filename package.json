@@ -11,6 +11,8 @@
   "scripts": {
     "build": "pnpm --filter @steady-state/web build",
     "dev": "pnpm --filter @steady-state/web dev",
+    "vercel:dev": "cd apps/web && vercel dev",
+    "vercel:dev:root": "vercel dev",
     "lint": "pnpm --filter @steady-state/web lint",
     "typecheck": "pnpm --filter @steady-state/web typecheck",
     "test": "pnpm --filter @steady-state/web test",
