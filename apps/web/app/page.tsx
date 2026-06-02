@@ -250,12 +250,20 @@ export default function HomePage() {
           <a href="#how-it-works" className="text-sm font-medium text-text2 tracking-[0.3px] hover:text-text transition-colors">How It Works</a>
           <Link href="/pricing" className="text-sm font-medium text-text2 tracking-[0.3px] hover:text-text transition-colors">Pricing</Link>
         </div>
-        <a
-          href="#cta"
-          className="px-5 sm:px-[22px] py-2.5 bg-green text-black text-[13px] font-semibold rounded-md tracking-[0.3px] hover:opacity-90 hover:-translate-y-px transition-all"
-        >
-          Request Demo
-        </a>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link
+            href="/login"
+            className="px-4 sm:px-5 py-2 sm:py-2.5 text-[13px] font-medium text-text2 hover:text-text border border-[#2E2E2E] hover:border-text3 rounded-md tracking-[0.3px] transition-all"
+          >
+            Login
+          </Link>
+          <a
+            href="#cta"
+            className="px-4 sm:px-[22px] py-2 sm:py-2.5 bg-green text-black text-[13px] font-semibold rounded-md tracking-[0.3px] hover:opacity-90 hover:-translate-y-px transition-all"
+          >
+            Request Demo
+          </a>
+        </div>
       </nav>
 
       {/* ═══════════════ HERO ═══════════════ */}
