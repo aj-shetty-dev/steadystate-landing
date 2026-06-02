@@ -238,7 +238,7 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
       </div>
 
       <div
-        className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0"
+        className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0 overflow-x-auto"
         role="region"
         aria-label="Members list"
         aria-busy={isLoading}
@@ -280,7 +280,7 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
               </thead>
             </table>
             {/* Body — scrollable, scrollbar only here */}
-            <div className={`transition-opacity duration-200 flex-1 min-h-0 overflow-y-auto ${isLoading ? 'opacity-50' : 'animate-fade-in'}`}>
+            <div className={`transition-opacity duration-200 flex-1 min-h-0 overflow-y-auto overflow-x-auto ${isLoading ? 'opacity-50' : 'animate-fade-in'}`}>
               <table className="w-full text-sm table-fixed">
                 <tbody>
                   {data.items.map((m) => {

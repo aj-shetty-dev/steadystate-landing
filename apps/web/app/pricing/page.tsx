@@ -22,7 +22,7 @@ const PLANS = [
 export default function PricingPage() {
   return (
     <main className="min-h-screen bg-bg text-text">
-      <header className="flex items-center justify-between px-8 py-6 border-b border-border">
+      <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border">
         <Link href="/" className="text-xl font-semibold text-green">SteadyState</Link>
         <nav className="flex gap-6 text-sm items-center">
           <Link href="/login" className="hover:text-green">Login</Link>
@@ -31,10 +31,10 @@ export default function PricingPage() {
           </Link>
         </nav>
       </header>
-      <section className="px-8 py-20 max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold">Simple, UAE-priced.</h1>
+      <section className="px-4 sm:px-6 lg:px-8 py-12 sm:py-20 max-w-6xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold">Simple, UAE-priced.</h1>
         <p className="mt-4 text-text2">14-day free trial. No card required. VAT inclusive.</p>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 sm:mt-12 grid gap-6 md:grid-cols-3">
           {PLANS.map((p) => (
             <div
               key={p.name}

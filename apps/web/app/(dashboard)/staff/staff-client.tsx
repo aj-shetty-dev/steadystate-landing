@@ -217,7 +217,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
       )}
 
       <div
-        className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
+        className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0"
         role="region"
         aria-label="Staff list"
         aria-busy={isLoading}
@@ -356,7 +356,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-text3 block mb-1">Email</label>
                   <input
@@ -379,7 +379,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-text3 block mb-1">Role *</label>
                   <select
@@ -411,7 +411,7 @@ export function StaffClient({ staff: initialStaff, initialError }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-text3 block mb-1">
                     Hourly rate (fils, e.g. 5000 = AED 50)

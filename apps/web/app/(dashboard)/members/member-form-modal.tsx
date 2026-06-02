@@ -236,7 +236,7 @@ export function MemberFormModal({ member, onClose }: Props) {
           <div className="space-y-4">
             <p className="text-[11px] font-semibold text-text3 uppercase tracking-widest">Membership</p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Status" required>
                 <SelectField
                   value={form.membershipStatus}
@@ -260,7 +260,7 @@ export function MemberFormModal({ member, onClose }: Props) {
           <div className="space-y-4">
             <p className="text-[11px] font-semibold text-text3 uppercase tracking-widest">Personal</p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Gender">
                 <SelectField
                   value={form.gender}
@@ -299,7 +299,7 @@ export function MemberFormModal({ member, onClose }: Props) {
             <div className="border-t border-border" />
             <p className="text-[11px] font-semibold text-text3 uppercase tracking-widest">Emergency Contact</p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Name">
                 <input
                   type="text" maxLength={200}

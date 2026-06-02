@@ -25,7 +25,7 @@ export default async function DoorPage() {
 
       <section>
         <h2 className="text-base font-semibold tracking-tight text-text mb-3">Recent signals</h2>
-        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0">
           <table className="w-full text-sm">
             <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>
@@ -56,7 +56,7 @@ export default async function DoorPage() {
 
       <section>
         <h2 className="text-base font-semibold tracking-tight text-text mb-3">Recent events</h2>
-        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0">
           <table className="w-full text-sm">
             <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
               <tr>

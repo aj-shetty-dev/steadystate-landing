@@ -355,7 +355,7 @@ export function ClassesClient({
 
           {/* Sessions table */}
           <div
-            className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
+            className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0"
             role="region"
             aria-label="Sessions list"
             aria-busy={isLoading}
@@ -486,7 +486,7 @@ export function ClassesClient({
             />
           </div>
 
-          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0">
             {filteredTypes.length === 0 ? (
               <EmptyState
                 icon={ListChecks}
@@ -594,7 +594,7 @@ export function ClassesClient({
             </div>
           )}
 
-          <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
+          <div className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0">
             {recurrences.length === 0 ? (
               <EmptyState
                 icon={CalendarRange}

@@ -350,7 +350,7 @@ export function BillingClient({
             <div className="relative">
               <Search className="w-4 h-4 text-text3 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                className="bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text w-56 placeholder:text-text3"
+                className="bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text w-full sm:w-56 placeholder:text-text3"
                 placeholder="Search member..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -364,7 +364,7 @@ export function BillingClient({
           </div>
 
           <div
-            className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
+            className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0"
             role="region"
             aria-label="Invoices list"
             aria-busy={isLoading}
@@ -436,7 +436,7 @@ export function BillingClient({
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-text3 animate-spin" /></div>
           ) : (
             <div className="flex flex-col flex-1 min-h-0 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-text2 mb-1.5">Start Day</label>
                   <input type="number" min={1} max={28} value={salaryForm.startDay}
@@ -483,7 +483,7 @@ export function BillingClient({
           {reconLoading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 text-text3 animate-spin" /></div>
           ) : recon ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-surface2 border border-border rounded-lg p-4">
                 <div className="text-text3 text-xs uppercase tracking-wider mb-1">POS Revenue</div>
                 <div className="text-lg font-semibold text-text">AED {recon.posRevenueAed}</div>
@@ -529,7 +529,7 @@ export function BillingClient({
                   {detail.member.email && <div className="text-text2 text-sm">{detail.member.email}</div>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-surface2 rounded-lg p-3">
                     <div className="text-text3 text-xs mb-0.5">Amount</div>
                     <div className="text-text font-semibold">AED {((detail.amountAed + detail.vatAed) / 100).toFixed(2)}</div>
@@ -623,7 +623,7 @@ export function BillingClient({
               <button onClick={() => setEditOpen(false)} className="p-1 text-text3 hover:text-text"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-text2 mb-1.5">Amount (fils)</label>
                   <input type="number" value={editData.amountAed}
@@ -698,7 +698,7 @@ export function BillingClient({
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-text2 mb-1.5">Amount (fils)</label>
                   <input type="number" value={composeForm.amountAed}

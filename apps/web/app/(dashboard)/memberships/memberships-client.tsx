@@ -353,7 +353,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
           </div>
 
           <div
-            className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0"
+            className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0 overflow-x-auto"
             role="region"
             aria-label="Memberships list"
             aria-busy={isLoading}
@@ -387,7 +387,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                   </thead>
                 </table>
                 {/* Body — scrollable */}
-                <div className={`transition-opacity duration-200 flex-1 min-h-0 overflow-y-auto ${isLoading ? 'opacity-50' : ''}`}>
+                <div className={`transition-opacity duration-200 flex-1 min-h-0 overflow-y-auto overflow-x-auto ${isLoading ? 'opacity-50' : ''}`}>
                   <table className="w-full text-sm table-fixed">
                     <tbody>
                     {memberships.map((m) => {
@@ -538,7 +538,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
               Sweep complete — created {renewalsResult.created} renewal(s), skipped {renewalsResult.skipped}, failed {renewalsResult.failed} (of {renewalsResult.due} due).
             </div>
           )}
-          <div className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0">
+          <div className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0 overflow-x-auto">
             {upcomingRenewals.length === 0 ? (
               <EmptyState
                 icon={RefreshCw}
@@ -559,7 +559,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                     </tr>
                   </thead>
                 </table>
-                <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
                   <table className="w-full text-sm table-fixed">
                     <tbody>
                       {upcomingRenewals.map((r) => {
@@ -598,7 +598,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
 
       {/* Plans tab */}
       {tab === 'plans' && (
-        <div className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0">
+        <div className="bg-surface border border-border rounded-lg flex flex-col flex-1 min-h-0 overflow-x-auto">
           {plans.length === 0 ? (
             <EmptyState
               icon={FileText}

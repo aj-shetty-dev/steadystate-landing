@@ -30,9 +30,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-dvh">
       <Sidebar user={user} />
-      <main className="flex-1 px-8 py-8 flex flex-col overflow-hidden">{children}</main>
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 flex flex-col overflow-hidden">{children}</main>
     </div>
   );
 }

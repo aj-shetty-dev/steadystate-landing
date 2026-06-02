@@ -75,7 +75,7 @@ export default async function ReportsPage() {
       {utilization && (
         <section>
           <h2 className="text-base font-semibold tracking-tight text-text mb-3">Class utilization</h2>
-          <div className="bg-surface border border-border rounded-lg">
+          <div className="bg-surface border border-border rounded-lg overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                 <tr>
@@ -114,7 +114,7 @@ export default async function ReportsPage() {
       {commission && (
         <section>
           <h2 className="text-base font-semibold tracking-tight text-text mb-3">Staff sales</h2>
-          <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="bg-surface border border-border rounded-lg overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface2 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
                 <tr>

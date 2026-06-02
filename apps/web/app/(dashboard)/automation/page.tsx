@@ -27,7 +27,7 @@ export default async function AutomationPage() {
 
       {error && <Alert>{error}</Alert>}
       {data && (
-        <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
+        <div className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0">
           <div className="px-4 py-3 border-b border-border text-sm font-medium text-text">
             Recent churn signals
           </div>

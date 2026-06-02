@@ -181,7 +181,7 @@ export function PlanFormModal({ plan, onClose }: Props) {
               Pricing
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Price (AED)" required>
                 <input
                   type="number"
@@ -213,7 +213,7 @@ export function PlanFormModal({ plan, onClose }: Props) {
               Terms
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Duration (days)" required>
                 <input
                   type="number"

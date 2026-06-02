@@ -35,7 +35,7 @@ export default async function AdminPage() {
     <div className="flex flex-col flex-1 min-h-0 space-y-4">
       <PageHeader title="Admin · Tenants" description="All tenants on the platform (super-admin only)." />
       {err && <Alert>{err}</Alert>}
-      <div className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0">
+      <div className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0">
         <table className="w-full text-sm">
           <thead className="bg-surface2 sticky top-0 z-10 text-text3 text-[11px] font-medium uppercase tracking-wider border-b border-border">
             <tr>

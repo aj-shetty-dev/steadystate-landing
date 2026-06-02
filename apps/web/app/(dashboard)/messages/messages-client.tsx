@@ -222,7 +222,7 @@ export function MessagesClient({
         <div className="relative">
           <Search className="w-4 h-4 text-text3 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
-            className="bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text w-56 placeholder:text-text3"
+            className="bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-text w-full sm:w-56 placeholder:text-text3"
             placeholder="Search phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -265,7 +265,7 @@ export function MessagesClient({
 
       {/* Messages Table */}
       <div
-        className="bg-surface border border-border rounded-lg overflow-y-auto flex-1 min-h-0"
+        className="bg-surface border border-border rounded-lg overflow-y-auto overflow-x-auto flex-1 min-h-0"
         role="region"
         aria-label="Messages list"
         aria-busy={isLoading}
@@ -444,7 +444,7 @@ export function MessagesClient({
               {/* Broadcast Mode */}
               {composeMode === 'broadcast' && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-text2 mb-1.5">Membership Status</label>
                       <select
