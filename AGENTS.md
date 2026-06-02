@@ -170,6 +170,10 @@ are faked (`CRM_MODE=fake`) until real sandbox credentials are available.
 - Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`.
 - Conventional Commits: `feat: add churn detector`.
 - No commits to `main` directly. PRs only.
+- **After every verified change:** commit the changes with a descriptive message and
+  `git push`. Pushing to `main` triggers an automatic Vercel deployment. Do not leave
+  uncommitted changes sitting in the working tree — push immediately once the change
+  is confirmed working (typecheck, lint, tests pass).
 
 ---
 
