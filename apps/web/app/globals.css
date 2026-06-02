@@ -11,7 +11,7 @@
   --color-green:   0 232 122;
   --color-text:    242 240 234;
   --color-text2:   154 152 144;
-  --color-text3:   90 88 86;
+  --color-text3:   120 118 115;
   --color-error:   248 113 113;   /* red-400 */
   --color-warning: 250 204 21;    /* yellow-400 */
 }
@@ -25,7 +25,7 @@
   --color-green:   0 140 80;      /* #008C50 — 4.5 : 1 on white */
   --color-text:    28 25 23;
   --color-text2:   107 104 99;
-  --color-text3:   160 157 153;
+  --color-text3:   120 117 113;
   --color-error:   220 38 38;     /* red-600 */
   --color-warning: 217 119 6;     /* amber-600 */
 }
@@ -37,6 +37,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 /* ─── Skeleton shimmer ─── */
@@ -66,4 +68,15 @@ body {
 @keyframes pulseSoft {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.55; }
+}
+
+/* ─── Touch target minimums ─── */
+@media (max-width: 767px) {
+  button:not([class*="aspect-"]),
+  [role="button"]:not([class*="aspect-"]),
+  a[class*="rounded"]:not([class*="group-"]),
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px;
+  }
 }

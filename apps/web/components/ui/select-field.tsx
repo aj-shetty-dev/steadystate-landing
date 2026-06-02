@@ -24,7 +24,13 @@ export function SelectField({
   function handleOpen() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      const viewportW = window.innerWidth;
+      const maxRight = viewportW - 16; // 16px gutter from right edge
+      let left = r.left;
+      if (left + r.width > maxRight) {
+        left = Math.max(16, maxRight - r.width);
+      }
+      setPos({ top: r.bottom + 4, left, width: r.width });
     }
     setOpen(true);
   }

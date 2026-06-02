@@ -197,11 +197,11 @@ export function Sidebar({ user }: { user: SessionUser }) {
 
       {/* ── Mobile hamburger FAB ── */}
       <button
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg bg-surface border border-border text-text2 hover:text-text hover:bg-surface2 shadow-md transition-colors"
-        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+        onClick={() => setSidebarOpen(true)}
+        className="md:hidden fixed top-4 left-4 z-50 p-3 rounded-lg bg-surface border border-border text-text2 hover:text-text hover:bg-surface2 shadow-md transition-colors"
+        aria-label="Open menu"
       >
-        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        <Menu className="w-5 h-5" />
       </button>
 
       {/* ── Mobile overlay backdrop ── */}

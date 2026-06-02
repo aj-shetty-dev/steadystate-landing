@@ -10,12 +10,12 @@ export default async function HomePage() {
     <main className="min-h-screen bg-bg text-text">
       <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border">
         <div className="text-xl font-semibold text-green">SteadyState</div>
-        <nav className="flex gap-6 text-sm items-center">
-          <Link href="/pricing" className="hover:text-green">Pricing</Link>
+        <nav className="flex gap-3 sm:gap-6 text-sm items-center">
+          <Link href="/pricing" className="hidden sm:inline hover:text-green">Pricing</Link>
           <Link href="/login" className="hover:text-green">Login</Link>
           <Link
             href="/signup"
-            className="rounded bg-green px-4 py-1.5 text-black font-medium hover:bg-green/90"
+            className="rounded bg-green px-3 sm:px-4 py-1.5 sm:py-2 text-black font-medium hover:bg-green/90 text-xs sm:text-sm"
           >
             Start free trial
           </Link>
@@ -32,7 +32,7 @@ export default async function HomePage() {
           starts to churn, a door event looks suspicious, or a salary-day retry can recover
           failed billing.
         </p>
-        <div className="mt-8 flex gap-3">
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3">
           <Link
             href="/signup"
             className="rounded bg-green px-6 py-3 text-black font-medium hover:bg-green/90"

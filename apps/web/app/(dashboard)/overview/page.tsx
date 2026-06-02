@@ -14,7 +14,7 @@ function StatCard({
   return (
     <div className="bg-surface border border-border rounded-lg p-5 hover:border-text3/40 transition-colors">
       <div className="text-xs font-medium uppercase tracking-wider text-text3">{label}</div>
-      <div className="text-3xl font-semibold tracking-tight text-text mt-3 tabular-nums">{value}</div>
+      <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-text mt-3 tabular-nums">{value}</div>
       {hint && <div className="text-xs text-text2 mt-2">{hint}</div>}
     </div>
   );

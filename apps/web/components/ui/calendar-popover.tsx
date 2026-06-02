@@ -39,7 +39,8 @@ export function CalendarPopover({
   function handleOpen() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const left = Math.min(r.left, window.innerWidth - 272);
+      const popoverW = window.innerWidth < 640 ? 288 : 256;
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - popoverW - 16));
       setPos({ top: r.bottom + 4, left });
     }
     if (selected) setView({ year: selected.getFullYear(), month: selected.getMonth() });
@@ -89,14 +90,14 @@ export function CalendarPopover({
         <>
           <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[70] w-64 bg-surface border border-border rounded-xl shadow-xl p-3"
+            className="fixed z-[70] w-72 sm:w-64 bg-surface border border-border rounded-xl shadow-xl p-3"
             style={{ top: pos.top, left: pos.left }}
           >
             <div className="flex items-center justify-between mb-3">
               <button
                 type="button"
                 onClick={() => shiftMonth(-1)}
-                className="p-1 rounded hover:bg-surface2 text-text3 hover:text-text transition-colors"
+                className="p-2 rounded hover:bg-surface2 text-text3 hover:text-text transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -106,7 +107,7 @@ export function CalendarPopover({
               <button
                 type="button"
                 onClick={() => shiftMonth(1)}
-                className="p-1 rounded hover:bg-surface2 text-text3 hover:text-text transition-colors"
+                className="p-2 rounded hover:bg-surface2 text-text3 hover:text-text transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -157,7 +158,7 @@ export function CalendarPopover({
                   onChange('');
                   setOpen(false);
                 }}
-                className="mt-2 w-full rounded-md py-1 text-xs text-text3 hover:text-text hover:bg-surface2 transition-colors"
+                className="mt-2 w-full rounded-md py-2 text-xs text-text3 hover:text-text hover:bg-surface2 transition-colors"
               >
                 Clear date
               </button>

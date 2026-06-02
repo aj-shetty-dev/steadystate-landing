@@ -10,6 +10,7 @@ const config: Config = {
         surface2:'rgb(var(--color-surface2)/ <alpha-value>)',
         border:  'rgb(var(--color-border)  / <alpha-value>)',
         green:   'rgb(var(--color-green)   / <alpha-value>)',
+        brand:   'rgb(var(--color-green)   / <alpha-value>)',
         text:    'rgb(var(--color-text)    / <alpha-value>)',
         text2:   'rgb(var(--color-text2)   / <alpha-value>)',
         text3:   'rgb(var(--color-text3)   / <alpha-value>)',
@@ -19,6 +20,10 @@ const config: Config = {
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out forwards',
         'pulse-soft': 'pulseSoft 1.5s ease-in-out infinite',
+        'spin-slow': 'spin 1s linear infinite',
+      },
+      animationDelay: {
+        '500': '500ms',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

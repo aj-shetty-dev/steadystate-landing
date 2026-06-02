@@ -70,12 +70,12 @@ export default function DatabaseWakeUp() {
     [...messages].reverse().find((m) => elapsed >= m.atSecond)?.text ?? messages[0].text;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg">
       <div className="flex flex-col items-center gap-6 px-6 text-center">
         {/* Animated spinner */}
         <div className="relative h-16 w-16">
           <div className="absolute inset-0 animate-spin rounded-full border-4 border-border border-t-brand" />
-          <div className="absolute inset-2 animate-spin rounded-full border-4 border-border border-b-brand animation-delay-500" />
+          <div className="absolute inset-2 animate-spin rounded-full border-4 border-border border-b-brand [animation-delay:500ms]" />
         </div>
 
         {/* Message */}
