@@ -66,7 +66,12 @@ async function apiFetchOnce<T>(
 
   let res: Response;
   try {
-    const fetchUrl = isServer ? `http://localhost:3000${url}` : url;
+    let fetchUrl = url;
+    if (isServer) {
+      const base =
+        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+      fetchUrl = `${base}${url}`;
+    }
     const fetchInit: RequestInit = {
       ...init,
       headers,
