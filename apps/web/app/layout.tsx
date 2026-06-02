@@ -1,14 +1,22 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Inter, Bebas_Neue, JetBrains_Mono } from 'next/font/google';
+import { DM_Sans, DM_Mono, Bebas_Neue, JetBrains_Mono } from 'next/font/google';
 import NextTopLoader from 'nextjs-toploader';
 import { ThemeProvider } from '../components/theme-provider';
 import './globals.css';
 
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ['latin'],
-  variable: '--font-sans',
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+});
+
+const dmMono = DM_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-dm-mono',
   display: 'swap',
 });
 
@@ -42,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <html
         lang="en"
         suppressHydrationWarning
-        className={`${inter.variable} ${bebas.variable} ${jetbrains.variable}`}
+        className={`${dmSans.variable} ${dmMono.variable} ${bebas.variable} ${jetbrains.variable}`}
       >
         <body className="font-sans antialiased">
           <NextTopLoader
