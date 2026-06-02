@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { auth } from '@clerk/nextjs/server';
 import { getSessionUser } from '../../lib/session';
 import { prisma } from '../../lib/prisma';
 import { Sidebar } from './sidebar';
@@ -16,7 +17,12 @@ async function isDatabaseAvailable(): Promise<boolean> {
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await getSessionUser();
-  if (!user) redirect('/sign-in');
+  if (!user) {
+    // If the user has a Clerk session but no tenant metadata, they need onboarding
+    const { userId } = await auth();
+    if (userId) redirect('/onboarding');
+    redirect('/sign-in');
+  }
 
   const dbAvailable = await isDatabaseAvailable();
   if (!dbAvailable) {
