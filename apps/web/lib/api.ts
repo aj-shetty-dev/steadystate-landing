@@ -14,7 +14,7 @@ export async function apiFetch<T>(
   init: RequestInit = {},
   revalidate?: number,
 ): Promise<T> {
-  return apiFetchOnce<T>(path, init, revalidate, true);
+  return apiFetchOnce<T>(path, init, revalidate, true, 1);
 }
 
 function friendlyNetworkMessage(err: unknown): string {
@@ -77,6 +77,7 @@ async function apiFetchOnce<T>(
   init: RequestInit,
   revalidate: number | undefined,
   allowRetry: boolean,
+  attempt: number,
 ): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
@@ -111,14 +112,28 @@ async function apiFetchOnce<T>(
     res = await fetch(fetchUrl, fetchInit);
   } catch (err) {
     console.error(`[apiFetch] ❌ fetch threw:`, err);
+    // Retry network errors with backoff — typical during Supabase cold starts
+    if (allowRetry && attempt < 3) {
+      const delay = 300 * Math.pow(3, attempt - 1); // 300ms, 900ms, 2700ms
+      console.warn(`[apiFetch] Retrying (attempt ${attempt + 1}/3) in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+      return apiFetchOnce<T>(path, init, revalidate, true, attempt + 1);
+    }
     throw new ApiError(0, friendlyNetworkMessage(err));
   }
 
   if (!res.ok) {
     const method = (init.method ?? 'GET').toUpperCase();
-    if (allowRetry && res.status >= 500 && (method === 'GET' || method === 'HEAD')) {
-      await new Promise((r) => setTimeout(r, 300));
-      return apiFetchOnce<T>(path, init, revalidate, false);
+    const isRetryable =
+      res.status === 0 || // connection error
+      res.status >= 500 || // server error
+      res.status === 408 || // request timeout
+      res.status === 429; // rate limited
+    if (allowRetry && isRetryable && (method === 'GET' || method === 'HEAD') && attempt < 3) {
+      const delay = 300 * Math.pow(3, attempt - 1); // 300ms, 900ms, 2700ms
+      console.warn(`[apiFetch] Retrying (attempt ${attempt + 1}/3) in ${delay}ms (status ${res.status})...`);
+      await new Promise((r) => setTimeout(r, delay));
+      return apiFetchOnce<T>(path, init, revalidate, true, attempt + 1);
     }
     let message = res.statusText;
     try {

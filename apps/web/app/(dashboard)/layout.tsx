@@ -8,7 +8,11 @@ import DatabaseWakeUp from '../../components/DatabaseWakeUp';
 
 async function isDatabaseAvailable(): Promise<boolean> {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    // Time out after 3s — if Supabase is sleeping, we want to show the wake-up screen fast
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB_CHECK_TIMEOUT')), 3000)),
+    ]);
     return true;
   } catch {
     return false;

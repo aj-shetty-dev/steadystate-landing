@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, act } from '@testing-library/react';
+import { cleanup, render, screen, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import DatabaseWakeUp from '../DatabaseWakeUp';
 
@@ -86,40 +86,41 @@ describe('DatabaseWakeUp', () => {
     expect(mockRefresh).toHaveBeenCalled();
   });
 
-  it('shows retry button after timeout (45s)', () => {
+  it('shows warm-up message after 45s (no timeout — polls indefinitely)', () => {
     fetchStub.mockResolvedValue({ ok: false, json: async () => ({ ok: false }) });
     renderWakeUp();
 
     act(() => { vi.advanceTimersByTime(46000); });
 
-    expect(screen.getByText('Retry')).toBeInTheDocument();
-    expect(screen.getByText(/taking longer than expected/i)).toBeInTheDocument();
+    // Should show the 45s message, not a timeout/retry state
+    expect(screen.getByText(/warming up from sleep/i)).toBeInTheDocument();
+    // No retry button — the component never gives up
+    expect(screen.queryByText('Retry')).not.toBeInTheDocument();
   });
 
-  it('resets state when retry button is clicked', async () => {
+  it('keeps polling indefinitely (never shows timeout)', async () => {
     fetchStub.mockResolvedValue({ ok: false, json: async () => ({ ok: false }) });
     renderWakeUp();
 
-    // Advance past timeout
-    act(() => { vi.advanceTimersByTime(46000); });
-    expect(screen.getByText('Retry')).toBeInTheDocument();
+    // Advance way past the old 45s timeout
+    act(() => { vi.advanceTimersByTime(90000); });
 
-    fireEvent.click(screen.getByText('Retry'));
-
-    expect(mockRefresh).toHaveBeenCalled();
-    // Should show initial message again
-    expect(screen.getByText('Welcome back!')).toBeInTheDocument();
+    // Should still be polling, showing the long-wait message
+    expect(screen.getByText(/cold starts can take a minute/i)).toBeInTheDocument();
+    // No retry button ever appears
+    expect(screen.queryByText('Retry')).not.toBeInTheDocument();
   });
 
-  it('does not show "Supabase" or "patience after inactivity" in any message', () => {
+  it('does not reference specific providers in messages', () => {
     renderWakeUp();
 
     // Advance through all time intervals
-    for (let s = 0; s <= 50; s += 2) {
+    for (let s = 0; s <= 90; s += 2) {
       act(() => { vi.advanceTimersByTime(2000); });
     }
 
     const allText = document.body.textContent ?? '';
+    // Generic language — no specific provider names
     expect(allText).not.toMatch(/supabase/i);
     expect(allText).not.toMatch(/periods of inactivity/i);
   });
