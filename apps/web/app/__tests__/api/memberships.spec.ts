@@ -205,16 +205,18 @@ describe('Memberships API — Full Lifecycle', () => {
       const membership = {
         id: 'ms-1', tenantId: MOCK_USER.tenantId, memberId: 'm1',
         planId: 'plan-1', status: 'ACTIVE',
+        startDate: new Date('2026-06-01'), endDate: new Date('2026-07-01'),
         plan: { maxFreezeDays: 30 },
         freezes: [],
       };
       mockPrisma.membership.findFirst.mockResolvedValue(membership);
-      mockPrisma.membershipFreeze.findMany.mockResolvedValue([]); // no active freezes
-      mockPrisma.$transaction.mockImplementation(async (fn: any) => fn({
-        membership: { update: vi.fn() },
-        membershipFreeze: { create: vi.fn().mockResolvedValue({ id: 'fz-1' }) },
-        member: { update: vi.fn() },
-      }));
+      mockPrisma.membershipFreeze.findMany.mockResolvedValue([]);
+      mockPrisma.membershipFreeze.findFirst.mockResolvedValue(null); // no overlapping freeze
+      mockPrisma.membershipFreeze.create.mockResolvedValue({ id: 'fz-1', status: 'ACTIVE', daysUsed: 7 });
+      mockPrisma.membership.update.mockResolvedValue({ id: 'ms-1', status: 'FROZEN' });
+      mockPrisma.member.update.mockResolvedValue({ id: 'm1', membershipStatus: 'FROZEN' });
+      // Ensure transaction uses mockPrisma (previous tests may have overridden it)
+      mockPrisma.$transaction.mockImplementation((fn: any) => fn(mockPrisma));
 
       const req = createReq({
         method: 'POST',
@@ -222,7 +224,7 @@ describe('Memberships API — Full Lifecycle', () => {
       });
       const res = await freezeHandlers.POST(req as any, { params: Promise.resolve({ id: 'ms-1' }) });
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
     });
 
     it('returns 404 when membership not found', async () => {
@@ -237,14 +239,15 @@ describe('Memberships API — Full Lifecycle', () => {
   describe('POST /api/memberships/[id]/unfreeze — Unfreeze', () => {
     it('unfreezes a frozen membership', async () => {
       mockPrisma.membership.findFirst.mockResolvedValue({
-        id: 'ms-1', tenantId: MOCK_USER.tenantId, status: 'FROZEN', frozenUntil: new Date('2026-06-12'),
+        id: 'ms-1', tenantId: MOCK_USER.tenantId, memberId: 'm1',
+        status: 'FROZEN', frozenUntil: new Date('2026-06-12'),
+        endDate: new Date('2026-07-01'),
         freezes: [{ id: 'fz-1', status: 'ACTIVE', endDate: new Date('2026-06-12') }],
       });
-      mockPrisma.$transaction.mockImplementation(async (fn: any) => fn({
-        membership: { update: vi.fn() },
-        membershipFreeze: { update: vi.fn() },
-        member: { update: vi.fn() },
-      }));
+      mockPrisma.membership.update.mockResolvedValue({
+        id: 'ms-1', status: 'ACTIVE', frozenUntil: null, endDate: new Date('2026-07-01'),
+      });
+      mockPrisma.$transaction.mockImplementation(async (fn: any) => fn(mockPrisma));
 
       const req = createReq({ method: 'POST' });
       const res = await unfreezeHandlers.POST(req as any, { params: Promise.resolve({ id: 'ms-1' }) });
@@ -257,8 +260,12 @@ describe('Memberships API — Full Lifecycle', () => {
     it('cancels a membership', async () => {
       mockPrisma.membership.findFirst.mockResolvedValue({
         id: 'ms-1', tenantId: MOCK_USER.tenantId, status: 'ACTIVE', memberId: 'm1',
+        member: { id: 'm1', fullName: 'Alice', phone: null, preferredLocale: 'EN' },
+        plan: { id: 'plan-1', nameEn: 'Gold', nameAr: null },
       });
-      mockPrisma.membership.update.mockResolvedValue({ id: 'ms-1', status: 'CANCELLED' });
+      mockPrisma.membership.update.mockResolvedValue({
+        id: 'ms-1', status: 'CANCELLED', memberId: 'm1', cancellationReason: 'Member requested',
+      });
 
       const req = createReq({ method: 'POST', body: { reason: 'Member requested cancellation' } });
       const res = await cancelHandlers.POST(req as any, { params: Promise.resolve({ id: 'ms-1' }) });

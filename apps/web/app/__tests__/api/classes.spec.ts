@@ -12,10 +12,11 @@ import { MOCK_USER, createReq, jsonBody, NOW } from './test-helpers';
 /* ------------------------------------------------------------------ */
 const mockPrisma = {
   classType: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-  classSession: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
+  classSession: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
   classRecurrence: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-  booking: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
+  booking: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
   member: { findFirst: vi.fn() },
+  staff: { findFirst: vi.fn() },
   membershipFreeze: { findFirst: vi.fn() },
   $transaction: vi.fn((fn: any) => fn(mockPrisma)),
 };
@@ -115,14 +116,15 @@ describe('Class Sessions', () => {
   });
 
   it('POST /api/classes/sessions — creates a session', async () => {
-    mockPrisma.classType.findFirst.mockResolvedValue({ id: 'ct-1', nameEn: 'Yoga' });
+    mockPrisma.classType.findFirst.mockResolvedValue({ id: 'ct-1', nameEn: 'Yoga', durationMin: 60 });
+    mockPrisma.classSession.findUnique.mockResolvedValue(null); // no duplicate checkin code
     mockPrisma.classSession.create.mockResolvedValue({
       id: 'sess-1', classTypeId: 'ct-1', startsAt: new Date('2026-06-04T07:00:00Z'),
       endsAt: new Date('2026-06-04T08:00:00Z'), status: 'SCHEDULED',
     });
     const req = createReq({
       method: 'POST',
-      body: { classTypeId: 'ct-1', startsAt: '2026-06-04T07:00:00Z', endsAt: '2026-06-04T08:00:00Z' },
+      body: { classTypeId: 'ct-1', startsAt: '2026-06-04T07:00:00Z' },
     });
     const res = await sessionHandlers.POST(req as any);
     expect(res.status).toBe(201);
@@ -131,8 +133,10 @@ describe('Class Sessions', () => {
   it('POST /api/classes/sessions/[id]/cancel — cancels a session', async () => {
     mockPrisma.classSession.findFirst.mockResolvedValue({
       id: 'sess-1', tenantId: MOCK_USER.tenantId, status: 'SCHEDULED',
+      classType: { id: 'ct-1', nameEn: 'Yoga', nameAr: null },
     });
     mockPrisma.classSession.update.mockResolvedValue({ id: 'sess-1', status: 'CANCELLED' });
+    mockPrisma.booking.updateMany.mockResolvedValue({ count: 3 });
     const req = createReq({ method: 'POST' });
     const res = await cancelSessionHandlers.POST(req as any, { params: Promise.resolve({ id: 'sess-1' }) });
     expect(res.status).toBe(200);
@@ -234,9 +238,11 @@ describe('Bookings — Full Lifecycle', () => {
 
   it('POST /api/classes/bookings/[id]/cancel — cancels a booking', async () => {
     mockPrisma.booking.findFirst.mockResolvedValue({
-      id: 'bk-1', tenantId: MOCK_USER.tenantId, status: 'BOOKED',
+      id: 'bk-1', tenantId: MOCK_USER.tenantId, status: 'BOOKED', sessionId: 'sess-1',
     });
     mockPrisma.booking.update.mockResolvedValue({ id: 'bk-1', status: 'CANCELLED' });
+    // Reset transaction to use mockPrisma — previous test may have overridden it
+    mockPrisma.$transaction.mockImplementation((fn: any) => fn(mockPrisma));
     const req = createReq({ method: 'POST' });
     const res = await bookingCancelHandlers.POST(req as any, { params: Promise.resolve({ id: 'bk-1' }) });
     expect(res.status).toBe(200);

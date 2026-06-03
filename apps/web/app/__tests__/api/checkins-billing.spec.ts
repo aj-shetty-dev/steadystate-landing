@@ -33,12 +33,18 @@ const mockPrisma = {
     findMany: vi.fn(), create: vi.fn(),
   },
   salaryWindow: {
-    findFirst: vi.fn(), upsert: vi.fn(),
+    findFirst: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(),
+  },
+  whatsappMessage: {
+    findMany: vi.fn(), create: vi.fn(),
   },
   $transaction: vi.fn((fn: any) => fn(mockPrisma)),
 };
 
 vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma }));
+vi.mock('@/lib/whatsapp', () => ({
+  sendWhatsapp: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("@/lib/auth-server", () => ({
   requireServerUser: vi.fn().mockResolvedValue({ id: "user-1", email: "owner@testgym.ae", fullName: "Test Owner", tenantId: "tenant-1", role: "OWNER" }),
   requireTenantId: vi.fn().mockResolvedValue("tenant-1"),
@@ -243,7 +249,7 @@ describe('Billing API', () => {
 
   describe('Billing Process', () => {
     it('POST /api/billing/process — triggers billing run', async () => {
-      mockPrisma.invoice.findMany.mockResolvedValue([]);
+      mockPrisma.paymentAttempt.findMany.mockResolvedValue([]);
       const req = createReq({ method: 'POST' });
       const res = await billingProcessHandlers.POST(req as any);
       expect(res.status).toBe(200);
@@ -252,7 +258,7 @@ describe('Billing API', () => {
 
   describe('Salary Window', () => {
     it('GET /api/billing/salary-window — returns salary window config', async () => {
-      mockPrisma.salaryWindow.findFirst.mockResolvedValue({
+      mockPrisma.salaryWindow.findUnique.mockResolvedValue({
         id: 'sw-1', tenantId: MOCK_USER.tenantId, startDay: 25, endDay: 28,
         timezone: 'Asia/Dubai', jitterMinutes: 120,
       });

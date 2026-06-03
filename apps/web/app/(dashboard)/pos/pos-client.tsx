@@ -59,6 +59,11 @@ function aed(fils: number): string {
   return `AED ${(fils / 100).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Format an amount already in AED (not fils). Membership plans store prices in AED. */
+function fmtAed(amount: number): string {
+  return `AED ${amount.toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function fmtDateTime(d: string): string {
   return new Date(d).toISOString().replace('T', ' ').slice(0, 16);
 }
@@ -427,7 +432,7 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
                             refId: plan.id,
                             name: plan.nameEn,
                             quantity: 1,
-                            unitPriceAed: plan.priceAed,
+                            unitPriceAed: plan.priceAed * 100, // plan prices are in AED, cart uses fils
                             vatRate: plan.vatRate,
                           })
                         }
@@ -435,7 +440,7 @@ export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans
                       >
                         <div className="text-sm font-medium text-text group-hover:text-green">{plan.nameEn}</div>
                         <div className="text-xs text-text3 mt-0.5">{plan.durationDays} days{plan.includesClasses ? ' · includes classes' : ''}{plan.maxFreezeDays > 0 ? ` · ${plan.maxFreezeDays}d freeze` : ''}</div>
-                        <div className="text-lg font-semibold text-text mt-2 tabular-nums">{aed(plan.priceAed)}</div>
+                        <div className="text-lg font-semibold text-text mt-2 tabular-nums">{fmtAed(plan.priceAed)}</div>
                       </button>
                     ))}
                   </div>

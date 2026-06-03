@@ -66,7 +66,7 @@ export function SessionDetailModal({ session, onClose, onCancelSession, cancelli
     searchDebounce.current = setTimeout(() => {
       apiFetch<MembersPage | MemberRow[]>(`/members?search=${encodeURIComponent(memberSearch)}&pageSize=20`)
         .then((d) => {
-          setMemberResults(Array.isArray(d) ? d : (d.data ?? []));
+          setMemberResults(Array.isArray(d) ? d : ((d as any).items ?? (d as any).data ?? []));
         })
         .catch(() => { /* ignore search errors */ });
     }, 300);
