@@ -252,7 +252,7 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
           <Link
-            href="/login"
+            href="/sign-in"
             className="px-4 sm:px-5 py-2 sm:py-2.5 text-[13px] font-medium text-text2 hover:text-text border border-[#2E2E2E] hover:border-text3 rounded-md tracking-[0.3px] transition-all"
           >
             Login

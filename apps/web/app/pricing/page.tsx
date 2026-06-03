@@ -25,8 +25,8 @@ export default function PricingPage() {
       <header className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border">
         <Link href="/" className="text-xl font-semibold text-green">SteadyState</Link>
         <nav className="flex gap-3 sm:gap-6 text-sm items-center">
-          <Link href="/login" className="hover:text-green">Login</Link>
-          <Link href="/signup" className="rounded bg-green px-3 sm:px-4 py-1.5 sm:py-2 text-black font-medium hover:bg-green/90 text-xs sm:text-sm">
+          <Link href="/sign-in" className="hover:text-green">Login</Link>
+          <Link href="/sign-up" className="rounded bg-green px-3 sm:px-4 py-1.5 sm:py-2 text-black font-medium hover:bg-green/90 text-xs sm:text-sm">
             Start free trial
           </Link>
         </nav>
@@ -50,7 +50,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Link
-                href="/signup"
+                href="/sign-up"
                 className="mt-6 block rounded bg-surface2 px-4 py-2 text-center text-sm hover:bg-border"
               >
                 Start trial
