@@ -78,15 +78,21 @@ export async function POST(req: NextRequest) {
   const user = await requireServerUser();
   const body = await req.json();
 
-  const parsed = createMembershipSchema.parse(body);
+  const parsed = createMembershipSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
 
   const [member, plan] = await Promise.all([
     prisma.member.findFirst({
-      where: { id: parsed.memberId, tenantId: user.tenantId },
+      where: { id: parsed.data.memberId, tenantId: user.tenantId },
       select: { id: true, fullName: true, phone: true, preferredLocale: true },
     }),
     prisma.membershipPlan.findFirst({
-      where: { id: parsed.planId, tenantId: user.tenantId, active: true },
+      where: { id: parsed.data.planId, tenantId: user.tenantId, active: true },
     }),
   ]);
 
@@ -97,16 +103,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Plan not found or inactive' }, { status: 404 });
   }
 
-  const start = parsed.startDate ? new Date(parsed.startDate) : new Date();
+  const start = parsed.data.startDate ? new Date(parsed.data.startDate) : new Date();
   const end = addDays(start, plan.durationDays);
-  const status = parsed.status ?? MembershipStatus.PENDING_PAYMENT;
+  const status = parsed.data.status ?? MembershipStatus.PENDING_PAYMENT;
 
   // Check for overlapping active/pending/frozen memberships
   const overlapping = await prisma.membership.findFirst({
     where: {
       tenantId: user.tenantId,
-      memberId: parsed.memberId,
-      planId: parsed.planId,
+      memberId: parsed.data.memberId,
+      planId: parsed.data.planId,
       status: { in: [MembershipStatus.ACTIVE, MembershipStatus.FROZEN, MembershipStatus.PENDING_PAYMENT] },
       endDate: { gt: start },
       startDate: { lt: end },
@@ -124,8 +130,8 @@ export async function POST(req: NextRequest) {
     const m = await tx.membership.create({
       data: {
         tenantId: user.tenantId,
-        memberId: parsed.memberId,
-        planId: parsed.planId,
+        memberId: parsed.data.memberId,
+        planId: parsed.data.planId,
         startDate: start,
         endDate: end,
         status,
@@ -133,7 +139,7 @@ export async function POST(req: NextRequest) {
     });
     if (status === MembershipStatus.ACTIVE) {
       await tx.member.update({
-        where: { id: parsed.memberId },
+        where: { id: parsed.data.memberId },
         data: { membershipStatus: MembershipStatus.ACTIVE, membershipExpiresAt: end },
       });
     }

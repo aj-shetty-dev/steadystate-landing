@@ -25,7 +25,7 @@ export default async function MembershipsPage({ searchParams }: { searchParams: 
 
   const [membershipsResult, plansResult, renewalsResult] = await Promise.allSettled([
     apiFetch<Paginated<MembershipRow>>(`/memberships?${qs.toString()}`),
-    apiFetch<MembershipPlanRow[]>('/memberships/plans'),
+    apiFetch<MembershipPlanRow[]>('/membership-plans'),
     apiFetch<UpcomingRenewalRow[]>('/memberships/renewals'),
   ]);
 

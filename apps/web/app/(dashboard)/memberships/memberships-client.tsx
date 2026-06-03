@@ -48,6 +48,7 @@ interface FreezeTarget {
 interface ChangePlanTarget {
   membershipId: string;
   memberName: string;
+  currentPlanId: string;
   currentPlanName: string;
 }
 
@@ -304,8 +305,8 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
               setRenewalsBusy(true);
               setRenewalsError(null);
               setRenewalsResult(null);
-              apiFetch('/memberships/process-renewals', { method: 'POST' })
-                .then((body: any) => {
+              apiFetch<{ due: number; created: number; skipped: number; failed: number }>('/memberships/process-renewals', { method: 'POST' })
+                .then((body) => {
       setRenewalsResult(body);
       router.refresh();
     })
@@ -458,7 +459,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                                         className="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface2 transition-colors flex items-center gap-1.5"
                                         onClick={() => {
                                           setOpenMenuId(null);
-                                          setChangePlanTarget({ membershipId: m.id, memberName: m.member.fullName, currentPlanName: m.plan.nameEn });
+                                          setChangePlanTarget({ membershipId: m.id, memberName: m.member.fullName, currentPlanId: m.planId, currentPlanName: m.plan.nameEn });
                                           setNewPlanId('');
                                           setChangePlanStart('');
                                         }}
@@ -775,7 +776,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                   value={newPlanId}
                   onChange={setNewPlanId}
                   options={activePlans
-                    .filter((p) => p.nameEn !== changePlanTarget.currentPlanName)
+                    .filter((p) => p.id !== changePlanTarget.currentPlanId)
                     .map((p) => ({
                       value: p.id,
                       label: `${p.nameEn} — AED ${p.priceAed.toLocaleString('en-AE')} / ${p.durationDays}d`,
@@ -861,7 +862,7 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
                 Cancel
               </button>
               <button
-                disabled={!freezeForm.startDate || !freezeForm.endDate}
+                disabled={!freezeForm.startDate || !freezeForm.endDate || freezeForm.endDate < freezeForm.startDate}
                 onClick={() => {
                   const body = {
                     startDate: new Date(freezeForm.startDate + 'T00:00:00').toISOString(),
@@ -875,6 +876,9 @@ export function MembershipsClient({ membershipsPage, plans, upcomingRenewals, in
               >
                 Freeze
               </button>
+              {freezeForm.startDate && freezeForm.endDate && freezeForm.endDate < freezeForm.startDate && (
+                <p className="text-xs text-error mt-2">End date must be on or after the start date.</p>
+              )}
             </div>
           </div>
         </div>

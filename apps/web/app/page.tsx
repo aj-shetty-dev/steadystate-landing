@@ -232,7 +232,7 @@ export default function HomePage() {
   }, [ctaEmail]);
 
   return (
-    <main className="min-h-screen bg-[#080808] text-[#F2F0EA] font-sans overflow-x-hidden" style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <main className="min-h-screen bg-[#080808] text-[#F2F0EA] overflow-x-hidden">
       {/* ═══════════════ NAV ═══════════════ */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between transition-all duration-300 ${
@@ -240,7 +240,7 @@ export default function HomePage() {
         }`}
         style={{ padding: '0 clamp(16px, 4vw, 48px)' }}
       >
-        <Link href="#" className="flex items-center gap-2.5 font-display text-[22px] tracking-[2px] text-[#FAFAF8]">
+        <Link href="#" className="flex items-center gap-2.5 font-bold text-[22px] tracking-[-0.01em] text-[#FAFAF8]">
           <span className="w-2 h-2 rounded-full bg-green shadow-[0_0_0_3px_rgba(0,232,122,0.12)] animate-[pulse-dot_2s_ease-in-out_infinite]" />
           STEADYSTATE
         </Link>
@@ -288,12 +288,12 @@ export default function HomePage() {
           {/* Left content */}
           <div>
             {/* Eyebrow */}
-            <div className="inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green bg-green/10 border border-green/20 px-3.5 py-1.5 rounded-full mb-7">
+            <div className="inline-flex items-center gap-2 font-semibold text-[11px] tracking-[0.08em] uppercase text-green bg-green/10 border border-green/20 px-3.5 py-1.5 rounded-full mb-7">
               <span className="w-1.5 h-1.5 rounded-full bg-green animate-[pulse-dot_1.5s_ease-in-out_infinite]" />
               Intelligence Layer for UAE Gyms
             </div>
 
-            <h1 className="font-display text-[clamp(48px,6vw,96px)] leading-[0.95] tracking-[1px] text-[#FAFAF8] mb-7">
+            <h1 className="font-extrabold text-[clamp(48px,6vw,96px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8] mb-7">
               GIVE YOUR<br />CRM <em className="not-italic text-green relative">A BRAIN.</em>
             </h1>
 
@@ -328,19 +328,19 @@ export default function HomePage() {
             {/* Hero stats */}
             <div className="flex gap-8 mt-12 pt-12 border-t border-border flex-wrap sm:flex-nowrap">
               <div>
-                <div className="font-display text-4xl text-[#FAFAF8] leading-none tracking-[1px]">
+                <div className="font-bold text-4xl text-[#FAFAF8] leading-none tracking-[-0.01em]">
                   <em className="not-italic text-green">70%</em>
                 </div>
                 <div className="text-xs text-text3 mt-1 tracking-[0.3px]">UAE premium gym market covered</div>
               </div>
               <div>
-                <div className="font-display text-4xl text-[#FAFAF8] leading-none tracking-[1px]">
+                <div className="font-bold text-4xl text-[#FAFAF8] leading-none tracking-[-0.01em]">
                   60<em className="not-italic text-green">s</em>
                 </div>
                 <div className="text-xs text-text3 mt-1 tracking-[0.3px]">To connect your existing CRM</div>
               </div>
               <div>
-                <div className="font-display text-4xl text-[#FAFAF8] leading-none tracking-[1px]">
+                <div className="font-bold text-4xl text-[#FAFAF8] leading-none tracking-[-0.01em]">
                   <em className="not-italic text-green">3×</em>
                 </div>
                 <div className="text-xs text-text3 mt-1 tracking-[0.3px]">Retention improvement avg.</div>
@@ -354,8 +354,8 @@ export default function HomePage() {
             <div className="relative bg-surface border border-border rounded-xl p-6 overflow-hidden mr-[60px]" style={{ boxShadow: '0 0 0 0 transparent' }}>
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green to-transparent opacity-50" />
               <div className="flex justify-between items-center mb-5">
-                <div className="text-xs text-text2 tracking-[0.5px] uppercase font-mono">Member Activity — Last 30 Days</div>
-                <div className="text-[10px] font-semibold text-green bg-green/10 border border-green/20 px-2 py-0.5 rounded font-mono tracking-[0.5px]">● LIVE</div>
+                <div className="text-xs text-text2 tracking-[0.5px] uppercase font-semibold">Member Activity — Last 30 Days</div>
+                <div className="text-[10px] font-semibold text-green bg-green/10 border border-green/20 px-2 py-0.5 rounded tracking-[0.5px]">● LIVE</div>
               </div>
               {/* Chart */}
               <div className="h-20 flex items-end gap-1 mb-4">
@@ -388,7 +388,7 @@ export default function HomePage() {
               <div className="flex items-center gap-2.5 bg-[#FF3D57]/5 border border-[#FF3D57]/15 rounded-md px-3.5 py-2.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FF3D57] flex-shrink-0 animate-pulse" />
                 <span className="text-xs text-text2"><strong className="text-text font-medium">Sara M.</strong> — 7 days inactive. Membership expires in 3 days.</span>
-                <span className="ml-auto text-[11px] font-semibold text-green whitespace-nowrap font-mono">NUDGE →</span>
+                <span className="ml-auto text-[11px] font-semibold text-green whitespace-nowrap">NUDGE →</span>
               </div>
             </div>
 
@@ -397,7 +397,7 @@ export default function HomePage() {
               className="absolute -right-5 -bottom-8 w-[220px] bg-surface2 border border-[#2E2E2E] rounded-xl p-4"
               style={{ boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
             >
-              <div className="text-[10px] text-text3 uppercase tracking-[1px] mb-2 font-mono">Connected CRMs</div>
+              <div className="text-[10px] text-text3 uppercase tracking-[1px] mb-2 font-semibold">Connected CRMs</div>
               {[
                 { code: 'MBO', name: 'Mindbody', bg: 'rgba(0,114,240,0.12)', color: '#0072F0', status: 'live', statusColor: 'text-green' },
                 { code: 'GFX', name: 'Glofox', bg: 'rgba(245,166,35,0.12)', color: '#F5A623', status: 'live', statusColor: 'text-green' },
@@ -406,7 +406,7 @@ export default function HomePage() {
                 <div key={crm.code} className="flex items-center gap-2 py-1.5 border-b border-border last:border-b-0">
                   <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: crm.bg, color: crm.color }}>{crm.code}</div>
                   <span className="text-xs text-text font-medium">{crm.name}</span>
-                  <span className={`ml-auto text-[10px] font-mono ${crm.statusColor}`}>
+                  <span className={`ml-auto text-[10px] font-medium ${crm.statusColor}`}>
                     {crm.status === 'live' ? '● live' : '↻ syncing'}
                   </span>
                 </div>
@@ -419,7 +419,7 @@ export default function HomePage() {
       {/* ═══════════════ LOGOS STRIP ═══════════════ */}
       <div className="py-8 border-y border-border bg-surface overflow-hidden" style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }}>
         <div className="max-w-[1280px] mx-auto flex items-center gap-4">
-          <span className="text-[11px] text-text3 tracking-[1px] uppercase whitespace-nowrap font-mono flex-shrink-0 mr-4">Integrates with</span>
+          <span className="text-[11px] text-text3 tracking-[1px] uppercase whitespace-nowrap font-semibold flex-shrink-0 mr-4">Integrates with</span>
           <div className="flex-1 overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 10%, black 90%, transparent)' }}>
             <div className="flex gap-0 animate-[scroll-logos_20s_linear_infinite] whitespace-nowrap" style={{ width: 'max-content' }}>
               {[...CRM_LOGOS, ...CRM_LOGOS].map((logo, i) => (
@@ -437,16 +437,16 @@ export default function HomePage() {
       <section className="fade-up bg-surface py-[72px] lg:py-[100px]" style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }} ref={gapRef}>
         <div className="max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           <div>
-            <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">The Intelligence Gap</div>
-            <h2 className="font-display text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[1px] text-[#FAFAF8] mb-5">
+            <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">The Intelligence Gap</div>
+            <h2 className="font-extrabold text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8] mb-5">
               GREAT AT STORING. TERRIBLE AT <em className="not-italic text-green">ACTING.</em>
             </h2>
             <table className="w-full mt-12 border-collapse">
               <thead>
                 <tr>
-                  <th className="font-mono text-[10px] tracking-[1.5px] uppercase text-text3 pb-4 text-left border-b border-border">CRM</th>
-                  <th className="font-mono text-[10px] tracking-[1.5px] uppercase text-text3 pb-4 text-left border-b border-border">The Gap</th>
-                  <th className="font-mono text-[10px] tracking-[1.5px] uppercase text-green pb-4 text-left border-b border-border">SteadyState Fills It</th>
+                  <th className="font-semibold text-[10px] tracking-[0.08em] uppercase text-text3 pb-4 text-left border-b border-border">CRM</th>
+                  <th className="font-semibold text-[10px] tracking-[0.08em] uppercase text-text3 pb-4 text-left border-b border-border">The Gap</th>
+                  <th className="font-semibold text-[10px] tracking-[0.08em] uppercase text-green pb-4 text-left border-b border-border">SteadyState Fills It</th>
                 </tr>
               </thead>
               <tbody>
@@ -459,7 +459,7 @@ export default function HomePage() {
                 ].map((row) => (
                   <tr key={row.crm}>
                     <td className="py-5 text-sm font-semibold text-[#FAFAF8] border-b border-border align-top pr-6 w-[120px]">
-                      <span className="inline-block px-2 py-0.5 bg-surface2 border border-[#2E2E2E] rounded text-[11px] font-mono text-text2 mb-1">{row.crm}</span>
+                      <span className="inline-block px-2 py-0.5 bg-surface2 border border-[#2E2E2E] rounded text-[11px] font-semibold text-text2 mb-1">{row.crm}</span>
                     </td>
                     <td className="py-5 text-sm text-text3 border-b border-border align-top pr-6 font-light">{row.gap}</td>
                     <td className="py-5 text-sm text-text2 border-b border-border align-top">{row.fill}</td>
@@ -474,7 +474,7 @@ export default function HomePage() {
               <p className="text-base sm:text-lg italic text-text font-light leading-relaxed">
                 &ldquo;We don&apos;t want you to leave Mindbody. We just want to give Mindbody a brain.&rdquo;
               </p>
-              <cite className="block mt-3 text-xs text-text3 not-italic font-mono tracking-[0.5px]">— Nuviq Strategy · SteadyState Core Principle</cite>
+              <cite className="block mt-3 text-xs text-text3 not-italic tracking-[0.5px]">— Nuviq Strategy · SteadyState Core Principle</cite>
             </div>
 
             {[
@@ -484,8 +484,8 @@ export default function HomePage() {
             ].map((bar, i) => (
               <div key={i} className="mt-4 first:mt-0">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs text-text3 font-mono">{bar.label}</span>
-                  <strong className="text-sm text-green font-mono">{bar.value}</strong>
+                  <span className="text-xs text-text3 font-medium">{bar.label}</span>
+                  <strong className="text-sm text-green font-semibold tabular-nums">{bar.value}</strong>
                 </div>
                 <div className="h-1.5 bg-surface2 rounded-sm overflow-hidden">
                   <div
@@ -504,8 +504,8 @@ export default function HomePage() {
         <div className="max-w-[1280px] mx-auto">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-5 mb-14">
             <div>
-              <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">CRM Integrations</div>
-              <h2 className="font-display text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[1px] text-[#FAFAF8]">
+              <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">CRM Integrations</div>
+              <h2 className="font-extrabold text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8]">
                 PLUG INTO <em className="not-italic text-green">YOUR MARKET</em>
               </h2>
             </div>
@@ -524,17 +524,17 @@ export default function HomePage() {
                   <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green to-transparent" />
                 )}
                 {crm.market && (
-                  <div className="absolute top-6 right-6 font-display text-[13px] text-text3 tracking-[1px]">
+                  <div className="absolute top-6 right-6 font-semibold text-[13px] text-text3 tracking-[-0.01em]">
                     <em className="not-italic text-green">{crm.market}</em> market
                   </div>
                 )}
-                <span className={`inline-block text-[9px] tracking-[1.5px] uppercase font-mono px-2 py-0.5 rounded-sm mb-4 ${tierStyles(crm.tierClass)}`}>
+                <span className={`inline-block text-[9px] tracking-[0.08em] uppercase font-semibold px-2 py-0.5 rounded-sm mb-4 ${tierStyles(crm.tierClass)}`}>
                   {crm.tier}
                 </span>
-                <div className="font-display text-[28px] tracking-[1px] text-[#FAFAF8] mb-1.5">{crm.name}</div>
+                <div className="font-bold text-[28px] tracking-[-0.01em] text-[#FAFAF8] mb-1.5">{crm.name}</div>
                 <p className="text-[13px] text-text2 leading-relaxed mb-5 font-light">{crm.desc}</p>
                 <div className="bg-surface2 border border-border rounded-md px-3.5 py-2.5">
-                  <div className="text-[10px] text-text3 tracking-[1px] uppercase font-mono mb-1">SteadyState Edge</div>
+                  <div className="text-[10px] text-text3 tracking-[0.08em] uppercase font-semibold mb-1">SteadyState Edge</div>
                   <div className="text-[13px] text-green font-medium">→ {crm.edge}</div>
                 </div>
               </div>
@@ -546,8 +546,8 @@ export default function HomePage() {
       {/* ═══════════════ FEATURES ═══════════════ */}
       <section className="fade-up bg-surface py-[72px] lg:py-[100px]" id="features" style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }}>
         <div className="max-w-[1280px] mx-auto">
-          <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">Core Intelligence</div>
-          <h2 className="font-display text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[1px] text-[#FAFAF8] mb-14">
+          <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">Core Intelligence</div>
+          <h2 className="font-extrabold text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8] mb-14">
             WHAT WE <em className="not-italic text-green">AUTOMATE</em>
           </h2>
 
@@ -557,17 +557,17 @@ export default function HomePage() {
                 key={feat.num}
                 className={`bg-surface p-8 lg:p-12 relative overflow-hidden transition-colors hover:bg-surface2 group ${feat.wide ? 'lg:col-span-2' : ''}`}
               >
-                <div className="font-display text-[80px] leading-none text-surface2 absolute top-5 right-6 tracking-[2px] select-none transition-colors group-hover:text-[#2E2E2E]">
+                <div className="font-extrabold text-[80px] leading-none text-surface2 absolute top-5 right-6 tracking-[-0.03em] select-none transition-colors group-hover:text-[#2E2E2E]">
                   {feat.num}
                 </div>
                 <div className="w-11 h-11 rounded-md bg-green/10 border border-green/20 flex items-center justify-center text-xl mb-6">
                   {feat.icon}
                 </div>
-                <div className="font-display text-[26px] tracking-[0.5px] text-[#FAFAF8] mb-3">{feat.title}</div>
+                <div className="font-bold text-[26px] tracking-[-0.01em] text-[#FAFAF8] mb-3">{feat.title}</div>
                 <p className={`text-sm text-text2 leading-relaxed font-light ${feat.wide ? 'max-w-full' : 'max-w-[380px]'}`}>
                   {feat.desc}
                 </p>
-                <div className="inline-flex items-center gap-1.5 mt-5 text-[11px] font-mono text-text3">
+                <div className="inline-flex items-center gap-1.5 mt-5 text-[11px] font-medium text-text3">
                   <span className="text-green">→</span> {feat.tag}
                 </div>
               </div>
@@ -580,8 +580,8 @@ export default function HomePage() {
       <section className="fade-up bg-[#080808] py-[72px] lg:py-[100px]" id="how-it-works" ref={hiwRef} style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }}>
         <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-[72px]">
-            <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">Setup</div>
-            <h2 className="font-display text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[1px] text-[#FAFAF8] mb-5">
+            <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">Setup</div>
+            <h2 className="font-extrabold text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8] mb-5">
               CONNECTED IN <em className="not-italic text-green">60 SECONDS</em>
             </h2>
             <p className="text-base text-text2 font-light max-w-[560px] mx-auto">No migrations. No API developers. No disruption to your team.</p>
@@ -601,10 +601,10 @@ export default function HomePage() {
                 { num: '4', time: '0:50 — 1:00', title: 'Go Live', desc: 'SteadyState begins monitoring your member data in real time. Your CRM just got a brain.' },
               ].map((step, i) => (
                 <div key={step.num} className="flex-1 flex flex-col items-center text-center px-6 py-4 lg:py-0 relative fade-up" style={{ transitionDelay: `${i * 100}ms` }}>
-                  <div className="w-16 h-16 rounded-full bg-surface border border-[#2E2E2E] flex items-center justify-center font-display text-[22px] tracking-[1px] text-text3 mb-6 relative z-10 transition-all hover:bg-green hover:border-green hover:text-black">
+                  <div className="w-16 h-16 rounded-full bg-surface border border-[#2E2E2E] flex items-center justify-center font-bold text-[22px] tracking-[-0.01em] text-text3 mb-6 relative z-10 transition-all hover:bg-green hover:border-green hover:text-black">
                     {step.num}
                   </div>
-                  <div className="font-mono text-[10px] tracking-[1px] uppercase text-green mb-2">{step.time}</div>
+                  <div className="font-medium text-[10px] tracking-[0.08em] uppercase text-green mb-2">{step.time}</div>
                   <div className="text-base font-semibold text-[#FAFAF8] mb-2">{step.title}</div>
                   <p className="text-[13px] text-text2 leading-relaxed font-light">{step.desc}</p>
                 </div>
@@ -617,7 +617,7 @@ export default function HomePage() {
       {/* ═══════════════ SOCIAL PROOF ═══════════════ */}
       <section className="fade-up bg-surface py-20 lg:py-20" style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }}>
         <div className="max-w-[1280px] mx-auto">
-          <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">By The Numbers</div>
+          <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">By The Numbers</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
             {[
               { val: '94%', isEm: true, label: 'Reduction in manual churn follow-up time' },
@@ -626,7 +626,7 @@ export default function HomePage() {
               { val: '60%', isEm: true, label: 'Drop in failed payment rate with salary-sync' },
             ].map((stat) => (
               <div key={stat.label} className="bg-surface2 border border-border rounded-xl p-7">
-                <div className="font-display text-[52px] leading-none tracking-[1px] text-[#FAFAF8] mb-2">
+                <div className="font-extrabold text-[52px] leading-none tracking-[-0.02em] text-[#FAFAF8] mb-2">
                   {stat.isEm ? (
                     <><em className="not-italic text-green">{stat.val.split(' ')[0]}</em>{stat.val.includes(' ') ? ' ' + stat.val.split(' ').slice(1).join(' ') : ''}</>
                   ) : stat.val}
@@ -641,8 +641,8 @@ export default function HomePage() {
       {/* ═══════════════ TESTIMONIALS ═══════════════ */}
       <section className="fade-up bg-[#080808] py-[72px] lg:py-[100px]" style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }}>
         <div className="max-w-[1280px] mx-auto">
-          <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">Early Adopters</div>
-          <h2 className="font-display text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[1px] text-[#FAFAF8] mb-14">
+          <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">Early Adopters</div>
+          <h2 className="font-extrabold text-[clamp(36px,4vw,64px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8] mb-14">
             WHAT GYM OWNERS <em className="not-italic text-green">SAY</em>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -669,8 +669,8 @@ export default function HomePage() {
       <section className="fade-up bg-surface py-[100px] lg:py-[120px] relative overflow-hidden" id="cta" style={{ paddingLeft: 'clamp(16px, 4vw, 48px)', paddingRight: 'clamp(16px, 4vw, 48px)' }}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_100%,rgba(0,232,122,0.06)_0%,transparent_70%)]" />
         <div className="max-w-[760px] mx-auto text-center relative z-10">
-          <div className="font-mono text-[11px] font-medium tracking-[1.5px] uppercase text-green mb-4">Start Free · No CRM Migration</div>
-          <h2 className="font-display text-[clamp(40px,5vw,80px)] leading-[0.95] tracking-[1px] text-[#FAFAF8] mb-5">
+          <div className="font-semibold text-[11px] tracking-[0.08em] uppercase text-green mb-4">Start Free · No CRM Migration</div>
+          <h2 className="font-extrabold text-[clamp(40px,5vw,80px)] leading-[0.95] tracking-[-0.02em] text-[#FAFAF8] mb-5">
             READY TO GIVE YOUR<br />CRM <em className="not-italic text-green">A BRAIN?</em>
           </h2>
           <p className="text-base text-text2 leading-relaxed font-light mb-11">
@@ -692,10 +692,9 @@ export default function HomePage() {
                 setCtaState('idle');
               }}
               placeholder="your@gym.com"
-              className={`flex-1 bg-surface2 border rounded-md px-[18px] py-3.5 text-sm text-text font-sans outline-none transition-colors ${
+              className={`flex-1 bg-surface2 border rounded-md px-[18px] py-3.5 text-sm text-text outline-none transition-colors ${
                 ctaState === 'error' ? 'border-[#FF3D57]' : 'border-[#2E2E2E] focus:border-green'
               }`}
-              style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
             />
             <button
               type="submit"
@@ -727,7 +726,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-8 lg:gap-16 mb-16">
             {/* Brand col */}
             <div>
-              <div className="flex items-center gap-2.5 font-display text-xl tracking-[2px] text-[#FAFAF8] mb-4">
+              <div className="flex items-center gap-2.5 font-bold text-xl tracking-[-0.01em] text-[#FAFAF8] mb-4">
                 <span className="w-2 h-2 rounded-full bg-green shadow-[0_0_0_3px_rgba(0,232,122,0.12)]" />
                 STEADYSTATE
               </div>
@@ -753,7 +752,7 @@ export default function HomePage() {
               { title: 'Company', links: ['About Nuviq', 'Careers', 'Contact', 'Dubai Office', 'Press Kit'] },
             ].map((col) => (
               <div key={col.title}>
-                <h5 className="text-[11px] text-text3 tracking-[1.5px] uppercase font-mono mb-5">{col.title}</h5>
+                <h5 className="text-[11px] text-text3 tracking-[0.08em] uppercase font-semibold mb-5">{col.title}</h5>
                 <ul className="space-y-2.5">
                   {col.links.map((link) => (
                     <li key={link}>

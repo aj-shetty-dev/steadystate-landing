@@ -31,9 +31,15 @@ export async function POST(
   const { id } = await params;
   const body = await req.json();
 
-  const parsed = freezeInputSchema.parse(body);
-  const startDate = new Date(parsed.startDate);
-  const endDate = new Date(parsed.endDate);
+  const parsed = freezeInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
+  const startDate = new Date(parsed.data.startDate);
+  const endDate = new Date(parsed.data.endDate);
 
   if (endDate <= startDate) {
     return NextResponse.json({ message: 'endDate must be after startDate' }, { status: 400 });
@@ -94,7 +100,7 @@ export async function POST(
         startDate,
         endDate,
         daysUsed: days,
-        reason: parsed.reason ?? null,
+        reason: parsed.data.reason ?? null,
         approvedByUserId: user.id,
         status: FreezeStatus.ACTIVE,
       },

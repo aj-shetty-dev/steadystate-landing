@@ -311,12 +311,15 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
                 Cancel
               </button>
               <button
-                disabled={!freezeStart || !freezeEnd}
+                disabled={!freezeStart || !freezeEnd || freezeEnd < freezeStart}
                 onClick={() => void handleFreeze()}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-green text-white text-sm font-medium hover:bg-green/90 disabled:opacity-50 transition-colors"
               >
                 Freeze
               </button>
+              {freezeStart && freezeEnd && freezeEnd < freezeStart && (
+                <p className="text-xs text-error mt-2">End date must be on or after the start date.</p>
+              )}
             </div>
           </div>
         </div>

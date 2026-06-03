@@ -76,6 +76,9 @@ export async function GET(req: NextRequest) {
     orderBy: { checkedInAt: 'desc' },
     take,
     skip,
+    include: {
+      member: { select: { id: true, fullName: true } },
+    },
   });
 
   return NextResponse.json(items);

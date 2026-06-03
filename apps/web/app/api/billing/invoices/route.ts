@@ -39,3 +39,44 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ items, total, page, pageSize });
 }
+
+// ---------------------------------------------------------------------------
+// POST /api/billing/invoices
+// ---------------------------------------------------------------------------
+export async function POST(req: NextRequest) {
+  const user = await requireServerUser();
+  const body = await req.json();
+
+  const { memberId, amountAed, vatAed, dueDate, description } = body as {
+    memberId?: string;
+    amountAed?: number;
+    vatAed?: number;
+    dueDate?: string;
+    description?: string;
+  };
+
+  if (!memberId || !amountAed || !dueDate) {
+    return NextResponse.json(
+      { message: 'memberId, amountAed (in fils), and dueDate are required' },
+      { status: 400 },
+    );
+  }
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      tenantId: user.tenantId,
+      memberId,
+      amountAed,
+      vatAed: vatAed ?? 0,
+      dueDate: new Date(dueDate),
+      description: description ?? null,
+      status: 'DUE',
+    },
+    include: {
+      member: { select: { id: true, fullName: true, phone: true, email: true } },
+      attempts: { orderBy: { scheduledFor: 'desc' }, take: 20 },
+    },
+  });
+
+  return NextResponse.json(invoice, { status: 201 });
+}

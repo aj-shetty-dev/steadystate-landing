@@ -365,9 +365,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                       <td className="px-4 py-3 text-text tabular-nums">{fmt(inv.dueDate)}</td>
                       <td className="px-4 py-3 text-text2">{inv.description ?? '—'}</td>
                       <td className="px-4 py-3 text-text font-medium tabular-nums">
-                        AED {inv.amountAed.toFixed(2)}
+                        AED {(inv.amountAed / 100).toFixed(2)}
                         {inv.vatAed > 0 && (
-                          <span className="text-text3 font-normal"> +{inv.vatAed.toFixed(2)} VAT</span>
+                          <span className="text-text3 font-normal"> +{(inv.vatAed / 100).toFixed(2)} VAT</span>
                         )}
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>

@@ -625,16 +625,18 @@ export function BillingClient({
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-text2 mb-1.5">Amount (fils)</label>
+                  <label className="block text-xs font-medium text-text2 mb-1.5">Amount (fils — 100 fils = AED 1)</label>
                   <input type="number" value={editData.amountAed}
                     onChange={(e) => setEditData({ ...editData, amountAed: Number(e.target.value) })}
                     className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-text" />
+                  <p className="text-xs text-green mt-1 tabular-nums">= AED {(editData.amountAed / 100).toFixed(2)}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text2 mb-1.5">VAT (fils)</label>
+                  <label className="block text-xs font-medium text-text2 mb-1.5">VAT (fils — 100 fils = AED 1)</label>
                   <input type="number" value={editData.vatAed}
                     onChange={(e) => setEditData({ ...editData, vatAed: Number(e.target.value) })}
                     className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-text" />
+                  <p className="text-xs text-green mt-1 tabular-nums">= AED {(editData.vatAed / 100).toFixed(2)}</p>
                 </div>
               </div>
               <div>
@@ -700,16 +702,18 @@ export function BillingClient({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-text2 mb-1.5">Amount (fils)</label>
+                  <label className="block text-xs font-medium text-text2 mb-1.5">Amount (fils — 100 fils = AED 1)</label>
                   <input type="number" value={composeForm.amountAed}
                     onChange={(e) => setComposeForm({ ...composeForm, amountAed: Number(e.target.value) })}
                     className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-text" />
+                  <p className="text-xs text-green mt-1 tabular-nums">= AED {(composeForm.amountAed / 100).toFixed(2)}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text2 mb-1.5">VAT (fils)</label>
+                  <label className="block text-xs font-medium text-text2 mb-1.5">VAT (fils — 100 fils = AED 1)</label>
                   <input type="number" value={composeForm.vatAed}
                     onChange={(e) => setComposeForm({ ...composeForm, vatAed: Number(e.target.value) })}
                     className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-text" />
+                  <p className="text-xs text-green mt-1 tabular-nums">= AED {(composeForm.vatAed / 100).toFixed(2)}</p>
                 </div>
               </div>
               <div>

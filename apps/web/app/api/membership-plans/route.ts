@@ -41,20 +41,26 @@ export async function POST(req: NextRequest) {
   const user = await requireServerUser();
   const body = await req.json();
 
-  const parsed = planInputSchema.parse(body);
+  const parsed = planInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
 
   const plan = await prisma.membershipPlan.create({
     data: {
       tenantId: user.tenantId,
-      nameEn: parsed.nameEn,
-      nameAr: parsed.nameAr ?? null,
-      description: parsed.description ?? null,
-      durationDays: parsed.durationDays,
-      priceAed: parsed.priceAed,
-      vatRate: parsed.vatRate,
-      includesClasses: parsed.includesClasses,
-      maxFreezeDays: parsed.maxFreezeDays,
-      active: parsed.active,
+      nameEn: parsed.data.nameEn,
+      nameAr: parsed.data.nameAr ?? null,
+      description: parsed.data.description ?? null,
+      durationDays: parsed.data.durationDays,
+      priceAed: parsed.data.priceAed,
+      vatRate: parsed.data.vatRate,
+      includesClasses: parsed.data.includesClasses,
+      maxFreezeDays: parsed.data.maxFreezeDays,
+      active: parsed.data.active,
     },
   });
 

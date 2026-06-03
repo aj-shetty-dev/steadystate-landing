@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { currentUser } from '@clerk/nextjs/server';
 
 export interface SessionUser {
   id: string;
@@ -6,12 +6,6 @@ export interface SessionUser {
   fullName: string;
   tenantId: string;
   role: 'OWNER' | 'STAFF' | 'SUPER_ADMIN';
-}
-
-/** Returns the current Clerk session token to forward as Bearer to the API. */
-export async function getAccessToken(): Promise<string | null> {
-  const { getToken } = await auth();
-  return getToken();
 }
 
 /**

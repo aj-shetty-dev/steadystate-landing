@@ -16,9 +16,10 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { PageHeader } from '../../../components/ui/page-header';
+import { SelectField } from '../../../components/ui/select-field';
 import { StatusBadge } from '../../../components/ui/status-badge';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
-import type { MessageRow, Paginated } from '../../../lib/api';
+import type { MembershipPlanRow, MessageRow, Paginated } from '../../../lib/api';
 import { apiFetch } from '../../../lib/api';
 
 const STATUSES = ['ALL', 'QUEUED', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'UNDELIVERED'] as const;
@@ -99,6 +100,15 @@ export function MessagesClient({
   const [segmentCheckinFrom, setSegmentCheckinFrom] = useState('');
   const [segmentCheckinTo, setSegmentCheckinTo] = useState('');
   const [broadcastResult, setBroadcastResult] = useState<{ sent: number; skipped: number; total: number } | null>(null);
+  const [broadcastPlans, setBroadcastPlans] = useState<MembershipPlanRow[]>([]);
+
+  // Fetch plans for broadcast segment dropdown
+  useEffect(() => {
+    if (!composeOpen || composeMode !== 'broadcast') return;
+    apiFetch<MembershipPlanRow[]>('/membership-plans?active=true')
+      .then(setBroadcastPlans)
+      .catch(() => {});
+  }, [composeOpen, composeMode]);
 
   const pageSize = messagesPage.pageSize || 50;
 
@@ -123,10 +133,9 @@ export function MessagesClient({
     if (q.length < 2) { setMemberResults([]); return; }
     setMemberSearching(true);
     try {
-      const res = await apiFetch<any>(`/members?search=${encodeURIComponent(q)}&take=10`);
-      //
-      const data = await res.json();
-      setMemberResults((data.items ?? data).slice(0, 10));
+      const data = await apiFetch<Paginated<any>>(`/members?search=${encodeURIComponent(q)}&take=10`);
+      const rows = data.items ?? (Array.isArray(data) ? data : []);
+      setMemberResults(rows.slice(0, 10));
     } catch {
       // ignore
     } finally {
@@ -468,11 +477,16 @@ export function MessagesClient({
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-text2 mb-1.5">Plan (optional)</label>
-                      <input
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text3"
-                        placeholder="Plan ID"
+                      <SelectField
                         value={segmentPlanId}
-                        onChange={(e) => setSegmentPlanId(e.target.value)}
+                        onChange={setSegmentPlanId}
+                        options={[
+                          { value: '', label: 'All plans' },
+                          ...broadcastPlans.map((p) => ({
+                            value: p.id,
+                            label: p.nameEn,
+                          })),
+                        ]}
                       />
                     </div>
                     <div>

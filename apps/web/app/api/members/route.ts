@@ -91,11 +91,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await requireServerUser();
   const body = await req.json();
-  const parsed = createMemberSchema.parse(body);
+  const parsed = createMemberSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
 
-  if (parsed.phone) {
+  if (parsed.data.phone) {
     const dup = await prisma.member.findFirst({
-      where: { tenantId: user.tenantId, phone: parsed.phone },
+      where: { tenantId: user.tenantId, phone: parsed.data.phone },
       select: { id: true },
     });
     if (dup) {
@@ -109,17 +115,17 @@ export async function POST(req: NextRequest) {
       externalId: randomUUID(),
       provider: 'NATIVE',
       source: 'MANUAL',
-      fullName: parsed.fullName,
-      phone: parsed.phone ?? null,
-      email: parsed.email ?? null,
-      membershipStatus: parsed.membershipStatus,
-      joinedAt: parsed.joinedAt ? new Date(parsed.joinedAt) : new Date(),
-      preferredLocale: parsed.preferredLocale,
-      gender: parsed.gender ?? null,
-      dateOfBirth: parsed.dateOfBirth ? new Date(parsed.dateOfBirth) : null,
-      medicalNotes: parsed.medicalNotes ?? null,
-      emergencyContact: parsed.emergencyContact ?? null,
-      assignedTrainerId: parsed.assignedTrainerId ?? null,
+      fullName: parsed.data.fullName,
+      phone: parsed.data.phone ?? null,
+      email: parsed.data.email ?? null,
+      membershipStatus: parsed.data.membershipStatus,
+      joinedAt: parsed.data.joinedAt ? new Date(parsed.data.joinedAt) : new Date(),
+      preferredLocale: parsed.data.preferredLocale,
+      gender: parsed.data.gender ?? null,
+      dateOfBirth: parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : null,
+      medicalNotes: parsed.data.medicalNotes ?? null,
+      emergencyContact: parsed.data.emergencyContact ?? null,
+      assignedTrainerId: parsed.data.assignedTrainerId ?? null,
       raw: {},
     },
   });

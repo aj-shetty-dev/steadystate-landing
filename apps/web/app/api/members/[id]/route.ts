@@ -65,11 +65,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ message: 'Member not found' }, { status: 404 });
   }
 
-  const parsed = updateMemberSchema.parse(body);
+  const parsed = updateMemberSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
 
-  if (parsed.phone && parsed.phone !== existing.phone) {
+  if (parsed.data.phone && parsed.data.phone !== existing.phone) {
     const dup = await prisma.member.findFirst({
-      where: { tenantId: user.tenantId, phone: parsed.phone, NOT: { id } },
+      where: { tenantId: user.tenantId, phone: parsed.data.phone, NOT: { id } },
       select: { id: true },
     });
     if (dup) {
@@ -80,15 +86,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const member = await prisma.member.update({
     where: { id },
     data: {
-      ...parsed,
-      joinedAt: parsed.joinedAt ? new Date(parsed.joinedAt) : undefined,
+      ...parsed.data,
+      joinedAt: parsed.data.joinedAt ? new Date(parsed.data.joinedAt) : undefined,
       dateOfBirth:
-        parsed.dateOfBirth === null ? null : parsed.dateOfBirth ? new Date(parsed.dateOfBirth) : undefined,
+        parsed.data.dateOfBirth === null ? null : parsed.data.dateOfBirth ? new Date(parsed.data.dateOfBirth) : undefined,
       membershipExpiresAt:
-        parsed.membershipExpiresAt === null
+        parsed.data.membershipExpiresAt === null
           ? null
-          : parsed.membershipExpiresAt
-            ? new Date(parsed.membershipExpiresAt)
+          : parsed.data.membershipExpiresAt
+            ? new Date(parsed.data.membershipExpiresAt)
             : undefined,
     },
   });

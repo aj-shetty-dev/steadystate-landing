@@ -2,12 +2,8 @@
 
 import { useClerk } from '@clerk/nextjs';
 import {
-  BarChart3,
-  BookOpen,
   Building2,
   CalendarDays,
-  CreditCard,
-  DoorOpen,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -16,9 +12,6 @@ import {
   MessageSquare,
   Receipt,
   ScanLine,
-  ShoppingBag,
-  Sparkles,
-  Target,
   UserCog,
   Users,
   Wallet,
@@ -41,18 +34,11 @@ const NAV: NavItem[] = [
   { href: '/members',      label: 'Members',      icon: Users },
   { href: '/memberships',  label: 'Memberships',  icon: FileText },
   { href: '/classes',      label: 'Classes',      icon: CalendarDays },
-  { href: '/leads',        label: 'Leads',        icon: Target },
   { href: '/checkins',     label: 'Check-ins',    icon: ScanLine },
   { href: '/pos',          label: 'POS',          icon: Receipt },
   { href: '/staff',        label: 'Staff',        icon: UserCog },
-  { href: '/shop',         label: 'Shop',         icon: ShoppingBag },
   { href: '/billing',      label: 'Billing',      icon: Wallet },
   { href: '/messages',     label: 'Messages',     icon: MessageSquare },
-  { href: '/reports',      label: 'Reports',      icon: BarChart3 },
-  { href: '/automation',   label: 'Automation',   icon: Sparkles },
-  { href: '/door',         label: 'Door events',  icon: DoorOpen },
-  { href: '/subscription', label: 'Subscription', icon: CreditCard },
-  { href: '/docs',         label: 'Docs',         icon: BookOpen },
 ];
 
 function userInitials(fullName: string): string {

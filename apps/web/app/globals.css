@@ -33,12 +33,13 @@
 body {
   background-color: rgb(var(--color-bg));
   color: rgb(var(--color-text));
-  font-feature-settings: 'cv11', 'ss01', 'ss03', 'cv02';
+  font-feature-settings: 'calt', 'tnum', 'cv01', 'cv02', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   touch-action: manipulation;
   overscroll-behavior: none;
+  letter-spacing: -0.011em;
 }
 
 /* ─── Skeleton shimmer ─── */

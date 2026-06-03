@@ -14,7 +14,7 @@ export default async function PosPage() {
     settle(apiFetch<ProductRow[]>('/shop/products?activeOnly=true')),
     settle(apiFetch<SaleRow[]>('/pos/sales?take=50')),
     settle(apiFetch<DailyAgg>('/pos/sales/reports/daily')),
-    settle(apiFetch<MembershipPlanRow[]>('/memberships/plans?active=true')),
+    settle(apiFetch<MembershipPlanRow[]>('/membership-plans?active=true')),
   ]);
 
   return (

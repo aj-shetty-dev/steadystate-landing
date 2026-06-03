@@ -19,16 +19,17 @@ const config: Config = {
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out forwards',
-        'pulse-soft': 'pulseSoft 1.5s ease-in-out infinite',
-        'spin-slow': 'spin 1s linear infinite',
       },
-      animationDelay: {
-        '500': '500ms',
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        display: ['var(--font-display)', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        display: ['var(--font-sans)', 'Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
       },
     },
   },

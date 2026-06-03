@@ -63,7 +63,7 @@ function fmtDateTime(d: string): string {
   return new Date(d).toISOString().replace('T', ' ').slice(0, 16);
 }
 
-const DAY_PASS_PRICE = 5000; // 50 AED default
+const DAY_PASS_PRICE = parseInt(process.env.NEXT_PUBLIC_DAY_PASS_PRICE_FILS ?? '5000', 10); // default 50 AED
 
 export function PosClient({ products, recentSales, dailyTotal, dailyCount, plans, initialErrors }: Props) {
   const router = useRouter();

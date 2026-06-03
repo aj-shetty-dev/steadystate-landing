@@ -49,6 +49,29 @@ async function getServerCookies(): Promise<string | null> {
   }
 }
 
+/**
+ * Returns the base URL to use for server-side API calls.
+ * Uses VERCEL_URL in production; reads the host header from the
+ * incoming request in dev so the port always matches.
+ */
+async function getServerBaseUrl(): Promise<string> {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  try {
+    const { headers } = await import('next/headers');
+    const h = await headers();
+    const host = h.get('host') || h.get('x-forwarded-host');
+    if (host) {
+      const protocol = h.get('x-forwarded-proto') || 'http';
+      return `${protocol}://${host}`;
+    }
+  } catch {
+    // Not in a request context
+  }
+  return 'http://localhost:3000';
+}
+
 async function apiFetchOnce<T>(
   path: string,
   init: RequestInit,
@@ -68,8 +91,7 @@ async function apiFetchOnce<T>(
   try {
     let fetchUrl = url;
     if (isServer) {
-      const base =
-        process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+      const base = await getServerBaseUrl();
       fetchUrl = `${base}${url}`;
     }
     const fetchInit: RequestInit = {
@@ -150,16 +172,6 @@ export interface MessageRow {
   createdAt: string;
 }
 
-export interface SignalRow {
-  id: string;
-  detectedAt: string;
-  daysSinceLastCheckin: number;
-  status: string;
-  nudgedAt: string | null;
-  errorMessage: string | null;
-  member: { id: string; fullName: string; phone: string | null };
-}
-
 export interface InvoiceRow {
   id: string;
   memberId: string;
@@ -185,48 +197,6 @@ export interface ProductRow {
   imageUrl: string | null;
   active: boolean;
   createdAt: string;
-}
-
-export interface OrderRow {
-  id: string;
-  memberId: string;
-  status: string;
-  subtotalAed: number;
-  vatAed: number;
-  totalAed: number;
-  currency: string;
-  createdAt: string;
-  member: { id: string; fullName: string };
-  lines: Array<{ id: string; productId: string; quantity: number; unitPriceAed: number; vatAed: number }>;
-}
-
-export interface DoorEventRow {
-  id: string;
-  source: string;
-  direction: 'IN' | 'OUT';
-  occurredAt: string;
-  externalRef: string | null;
-  member: { id: string; fullName: string } | null;
-}
-
-export interface DoorSignalRow {
-  id: string;
-  kind: string;
-  detail: string | null;
-  detectedAt: string;
-  member: { id: string; fullName: string } | null;
-}
-
-export interface SubscriptionRow {
-  id: string;
-  plan: string;
-  status: string;
-  trialEndsAt: string | null;
-  currentPeriodStart: string | null;
-  currentPeriodEnd: string | null;
-  provider: string | null;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
 }
 
 export interface MembershipPlanRow {
@@ -333,30 +303,6 @@ export interface ClassBookingRow {
   };
 }
 
-export interface LeadRow {
-  id: string;
-  fullName: string;
-  phone: string;
-  email: string | null;
-  source: string;
-  stage: string;
-  notes: string | null;
-  assignedToUserId: string | null;
-  convertedMemberId: string | null;
-  nextFollowUpAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  activities?: LeadActivityRow[];
-}
-
-export interface LeadActivityRow {
-  id: string;
-  type: string;
-  summary: string;
-  createdByUserId: string | null;
-  createdAt: string;
-}
-
 export interface SaleRow {
   id: string;
   type: string;
@@ -406,38 +352,6 @@ export interface CheckinRow {
   checkedInAt: string;
   staffId: string | null;
   sessionId: string | null;
+  member?: { id: string; fullName: string } | null;
 }
 
-export interface RevenueReport {
-  range: { from: string; to: string };
-  sales: { count: number; subtotalAed: number; vatAed: number; totalAed: number };
-  invoices: { count: number; totalAed: number };
-  grandTotalAed: number;
-}
-
-export interface MemberGrowthReport {
-  range: { from: string; to: string };
-  newMembers: number;
-  churnedMembers: number;
-  netGrowth: number;
-  currentActive: number;
-}
-
-export interface ClassUtilizationReport {
-  range: { from: string; to: string };
-  classes: Array<{
-    classTypeId: string;
-    nameEn: string;
-    sessions: number;
-    capacity: number;
-    booked: number;
-    checkedIn: number;
-    fillRate: number;
-    attendanceRate: number;
-  }>;
-}
-
-export interface StaffCommissionReport {
-  range: { from: string; to: string };
-  staff: Array<{ id: string; name: string; role: string; salesCount: number; totalAed: number }>;
-}

@@ -34,9 +34,15 @@ export async function POST(req: NextRequest) {
   const user = await requireServerUser();
 
   const body = (await req.json()) as Record<string, unknown>;
-  const parsed = salaryWindowSchema.parse(body);
+  const parsed = salaryWindowSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
 
-  if (parsed.startDay !== undefined && parsed.endDay !== undefined && parsed.startDay > parsed.endDay) {
+  if (parsed.data.startDay !== undefined && parsed.data.endDay !== undefined && parsed.data.startDay > parsed.data.endDay) {
     return NextResponse.json(
       { error: 'startDay cannot be after endDay' },
       { status: 400 },
@@ -45,8 +51,8 @@ export async function POST(req: NextRequest) {
 
   const updated = await prisma.salaryWindow.upsert({
     where: { tenantId: user.tenantId },
-    create: { tenantId: user.tenantId, ...parsed },
-    update: parsed,
+    create: { tenantId: user.tenantId, ...parsed.data },
+    update: parsed.data,
   });
 
   return NextResponse.json(updated);
