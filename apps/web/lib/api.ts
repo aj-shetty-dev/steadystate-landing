@@ -112,10 +112,13 @@ async function apiFetchOnce<T>(
     res = await fetch(fetchUrl, fetchInit);
   } catch (err) {
     console.error(`[apiFetch] ❌ fetch threw:`, err);
-    // Retry network errors with backoff — typical during Supabase cold starts
-    if (allowRetry && attempt < 3) {
-      const delay = 300 * Math.pow(3, attempt - 1); // 300ms, 900ms, 2700ms
-      console.warn(`[apiFetch] Retrying (attempt ${attempt + 1}/3) in ${delay}ms...`);
+    // On the client, retry much longer — Supabase cold starts can take 10-60s
+    // On the server, fail faster so the error boundary can take over with auto-retry
+    const maxAttempts = isServer ? 3 : 5;
+    const baseDelay = isServer ? 300 : 2000;
+    if (allowRetry && attempt < maxAttempts) {
+      const delay = baseDelay * Math.pow(isServer ? 3 : 2, attempt - 1);
+      console.warn(`[apiFetch] Retrying (attempt ${attempt + 1}/${maxAttempts}) in ${delay}ms...`);
       await new Promise((r) => setTimeout(r, delay));
       return apiFetchOnce<T>(path, init, revalidate, true, attempt + 1);
     }
@@ -125,13 +128,15 @@ async function apiFetchOnce<T>(
   if (!res.ok) {
     const method = (init.method ?? 'GET').toUpperCase();
     const isRetryable =
-      res.status === 0 || // connection error
-      res.status >= 500 || // server error
-      res.status === 408 || // request timeout
-      res.status === 429; // rate limited
-    if (allowRetry && isRetryable && (method === 'GET' || method === 'HEAD') && attempt < 3) {
-      const delay = 300 * Math.pow(3, attempt - 1); // 300ms, 900ms, 2700ms
-      console.warn(`[apiFetch] Retrying (attempt ${attempt + 1}/3) in ${delay}ms (status ${res.status})...`);
+      res.status === 0 ||
+      res.status >= 500 ||
+      res.status === 408 ||
+      res.status === 429;
+    const maxAttempts = isServer ? 3 : 5;
+    const baseDelay = isServer ? 300 : 2000;
+    if (allowRetry && isRetryable && (method === 'GET' || method === 'HEAD') && attempt < maxAttempts) {
+      const delay = baseDelay * Math.pow(isServer ? 3 : 2, attempt - 1);
+      console.warn(`[apiFetch] Retrying (attempt ${attempt + 1}/${maxAttempts}) in ${delay}ms (status ${res.status})...`);
       await new Promise((r) => setTimeout(r, delay));
       return apiFetchOnce<T>(path, init, revalidate, true, attempt + 1);
     }
