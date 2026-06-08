@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const search = qs.get('search')?.trim();
   const status = qs.get('status');
 
-  const validStatuses = ['ACTIVE', 'FROZEN', 'CANCELLED', 'PENDING_PAYMENT'];
+  const validStatuses = ['ACTIVE', 'EXPIRED', 'PAUSED', 'FROZEN', 'CANCELLED', 'PENDING', 'PENDING_PAYMENT'];
   const statusFilter = status && validStatuses.includes(status) ? status : undefined;
 
   const take = pageSize;

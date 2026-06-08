@@ -201,7 +201,7 @@ export function BillingClient({
 
   const handleVoid = async (id: string) => {
     try {
-      await apiFetch(`billing/invoices/${id}/void`, { method: 'POST' })
+      await apiFetch(`/billing/invoices/${id}/void`, { method: 'POST' })
       router.refresh();
       loadDetail(id);
     } catch (e) {
@@ -211,7 +211,7 @@ export function BillingClient({
 
   const handleWriteOff = async (id: string) => {
     try {
-      await apiFetch(`billing/invoices/${id}/write-off`, { method: 'POST' })
+      await apiFetch(`/billing/invoices/${id}/write-off`, { method: 'POST' })
       router.refresh();
       loadDetail(id);
     } catch (e) {
@@ -245,7 +245,7 @@ export function BillingClient({
     setComposeMemberSearch(q);
     if (q.length < 2) { setComposeMemberResults([]); return; }
     try {
-      const membersResult = await apiFetch<any>(`/members?search=${encodeURIComponent(q)}&take=10`);
+      const membersResult = await apiFetch<any>(`/members?search=${encodeURIComponent(q)}&pageSize=10`);
       setComposeMemberResults((membersResult.items ?? membersResult).slice(0, 10));
     } catch { /* ignore */ }
   };
@@ -729,7 +729,7 @@ export function BillingClient({
                   placeholder="e.g. Monthly membership renewal"
                   className="w-full bg-surface2 border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text3" />
               </div>
-              <button onClick={handleCreate} disabled={composeSaving || !composeSelectedMember || !composeForm.dueDate}
+              <button onClick={handleCreate} disabled={composeSaving || !composeSelectedMember || !composeForm.dueDate || !composeForm.amountAed}
                 className="w-full px-4 py-2.5 bg-green text-white rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
                 {composeSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 {composeSaving ? 'Creating...' : 'Create Invoice'}

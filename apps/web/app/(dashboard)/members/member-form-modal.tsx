@@ -120,8 +120,12 @@ export function MemberFormModal({ member, onClose }: Props) {
       membershipStatus: form.membershipStatus,
       preferredLocale: form.preferredLocale,
     };
-    if (form.phone.trim()) payload.phone = form.phone.trim();
-    else payload.phone = null;
+    if (form.phone.trim()) {
+      // Normalize: strip spaces, dashes, parentheses, and dots
+      payload.phone = form.phone.trim().replace(/[\s\-\(\)\.]/g, '');
+    } else {
+      payload.phone = null;
+    }
     if (form.email.trim()) payload.email = form.email.trim();
     else payload.email = null;
     if (form.joinedAt) payload.joinedAt = form.joinedAt;
@@ -134,7 +138,7 @@ export function MemberFormModal({ member, onClose }: Props) {
     if (form.emergencyContactName.trim() || form.emergencyContactPhone.trim()) {
       payload.emergencyContact = {
         name: form.emergencyContactName.trim() || undefined,
-        phone: form.emergencyContactPhone.trim() || undefined,
+        phone: form.emergencyContactPhone.trim().replace(/[\s\-\(\)\.]/g, '') || undefined,
       };
     } else {
       payload.emergencyContact = null;

@@ -49,25 +49,30 @@ export async function POST(req: NextRequest) {
     const row = rows[i];
     const lineNum = i + 2; // 1-indexed + header row
 
-    if (!row.fullName) {
+    // Normalize: headers are lowercased during parse, so access by lowercase key
+    const fullName = row.fullName || (row as any).fullname || '';
+    const phone = row.phone || '';
+    const email = row.email || '';
+
+    if (!fullName) {
       errors.push({ row: lineNum, error: 'Missing fullName' });
       continue;
     }
 
     const cleaned: { fullName: string; phone: string; email?: string } = {
-      fullName: row.fullName,
-      phone: row.phone ?? '',
+      fullName,
+      phone,
     };
-    if (row.email) cleaned.email = row.email;
+    if (email) cleaned.email = email;
 
     // Check if member exists by phone
-    if (row.phone) {
+    if (phone) {
       const existing = await prisma.member.findFirst({
-        where: { phone: row.phone, tenantId: user.tenantId },
+        where: { phone, tenantId: user.tenantId },
         select: { id: true, fullName: true },
       });
       if (existing) {
-        if (existing.fullName === row.fullName) {
+        if (existing.fullName === fullName) {
           unchanged++;
         } else {
           toUpdate.push({ id: existing.id, row: cleaned });
