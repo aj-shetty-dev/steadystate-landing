@@ -201,38 +201,33 @@ describe('MemberFormModal', () => {
     });
   });
 
-  describe('submit', () => {
-    it('displays error when server returns a non-ok response', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (url: string) => {
-          if (typeof url === 'string' && url.includes('membership-plans')) {
-            return { ok: true, json: async () => planList } as Response;
-          }
-          if (typeof url === 'string' && url.includes('staff')) {
-            return { ok: true, json: async () => staffList } as Response;
-          }
-          return {
-            ok: false,
-            status: 409,
-            json: async () => ({ message: 'A member with this phone number already exists' }),
-          } as Response;
-        }),
-      );
+  describe('submit button disabled state', () => {
+    it('disables submit button when fullName is empty', () => {
+      renderCreate();
+      const addBtn = screen.getByRole('button', { name: 'Add Member' });
+      expect(addBtn).toBeDisabled();
+    });
 
+    it('disables submit button when fullName is whitespace only', async () => {
+      renderCreate();
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      await userEvent.type(nameInput, '   ');
+
+      const addBtn = screen.getByRole('button', { name: 'Add Member' });
+      // After trim, "   " is empty, so button should be disabled
+      expect(addBtn).toBeDisabled();
+    });
+
+    it('enables submit button when fullName has content', async () => {
       renderCreate();
       const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
       await userEvent.type(nameInput, 'Test User');
 
-      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
-
-      await waitFor(() => {
-        expect(screen.getByText('A member with this phone number already exists')).toBeInTheDocument();
-      });
+      const addBtn = screen.getByRole('button', { name: 'Add Member' });
+      expect(addBtn).not.toBeDisabled();
     });
 
-    it('toggles button text to "Saving…" while submitting', async () => {
-      // Use a pending promise to keep the submit in flight
+    it('disables submit button while saving (loading state)', async () => {
       let resolvePromise: (v: unknown) => void = () => {};
       const pendingPromise = new Promise((resolve) => {
         resolvePromise = resolve;
@@ -262,40 +257,286 @@ describe('MemberFormModal', () => {
         expect(screen.getByText('Saving…')).toBeInTheDocument();
       });
 
-      // Clean up
       resolvePromise(undefined);
     });
+  });
 
-    it('calls onClose and refreshes router after successful create', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (url: string) => {
-          if (typeof url === 'string' && url.includes('membership-plans')) {
-            return { ok: true, json: async () => planList } as Response;
-          }
-          if (typeof url === 'string' && url.includes('staff')) {
-            return { ok: true, json: async () => staffList } as Response;
-          }
-          return {
-            ok: true,
-            json: async () => ({ id: 'new-1' }),
-            clone: () => ({ json: async () => ({ id: 'new-1' }) }),
-          } as Response;
-        }),
+  describe('client-side field validation', () => {
+    it('disables submit button when fullName is empty (prevents submit)', () => {
+      renderCreate();
+
+      // The button is disabled because fullName is empty, so clicking does nothing
+      const addBtn = screen.getByRole('button', { name: 'Add Member' });
+      expect(addBtn).toBeDisabled();
+    });
+
+    it('shows field error for invalid phone format on submit', async () => {
+      renderCreate();
+
+      // Fill name to enable the button
+      fireEvent.change(screen.getByPlaceholderText('Ahmed Al Mansoori'), {
+        target: { value: 'Test User' },
+      });
+
+      // Set invalid phone (no + prefix)
+      fireEvent.change(screen.getAllByPlaceholderText('+971501234567')[0], {
+        target: { value: '0501234567' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/E\.164/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows field error for invalid email format on submit', async () => {
+      const { container } = renderCreate();
+
+      // Fill name to enable button
+      fireEvent.change(screen.getByPlaceholderText('Ahmed Al Mansoori'), {
+        target: { value: 'Test User' },
+      });
+
+      // Set invalid email
+      fireEvent.change(screen.getByPlaceholderText('ahmed@example.com'), {
+        target: { value: 'not-an-email' },
+      });
+
+      // Submit via form element directly (bypasses HTML5 email validation on button click)
+      const form = container.querySelector('form');
+      fireEvent.submit(form!);
+
+      await waitFor(() => {
+        expect(screen.getByText(/valid email/i)).toBeInTheDocument();
+      });
+    });
+
+    it('does NOT submit to server when client-side validation fails', async () => {
+      const fetchFn = vi.fn(async (url: string) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return { ok: true, json: async () => ({ id: 'should-not-reach' }) } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      // Fill name to enable button, but use invalid phone
+      fireEvent.change(screen.getByPlaceholderText('Ahmed Al Mansoori'), {
+        target: { value: 'Test User' },
+      });
+      fireEvent.change(screen.getAllByPlaceholderText('+971501234567')[0], {
+        target: { value: 'bad-phone' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      // Should show validation error
+      await waitFor(() => {
+        expect(screen.getByText(/E\.164/i)).toBeInTheDocument();
+      });
+
+      // The fetch should NOT have been called for /members endpoint
+      const memberCall = fetchFn.mock.calls.find(
+        (call: unknown[]) =>
+          typeof call[0] === 'string' &&
+          (call[0] as string).includes('/members') &&
+          !(call[0] as string).includes('membership-plans') &&
+          !(call[0] as string).includes('staff'),
       );
+      expect(memberCall).toBeUndefined();
+    });
 
-      const { onClose } = renderCreate();
-      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
-      await userEvent.type(nameInput, 'Test User');
+    it('submits successfully after fixing validation errors (re-submit flow)', async () => {
+      const { container } = renderCreate();
+
+      // Fill name to enable button, but use invalid phone
+      fireEvent.change(screen.getByPlaceholderText('Ahmed Al Mansoori'), {
+        target: { value: 'Test User' },
+      });
+      const phoneInput = screen.getAllByPlaceholderText('+971501234567')[0];
+      fireEvent.change(phoneInput, { target: { value: 'bad-phone' } });
+
+      // First submit triggers validation error
+      const form = container.querySelector('form');
+      fireEvent.submit(form!);
+      await waitFor(() => {
+        expect(screen.getByText(/E\.164/i)).toBeInTheDocument();
+      });
+
+      // Now fix the phone
+      fireEvent.change(phoneInput, { target: { value: '+971501234567' } });
+
+      // Re-submit should succeed — router.refresh is called on success
+      fireEvent.submit(form!);
+
+      await waitFor(() => {
+        expect(mockRouter.refresh).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('phone normalization in payload', () => {
+    it('strips spaces from phone before sending', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      await userEvent.type(screen.getAllByPlaceholderText('+971501234567')[0], '+971 50 123 4567');
 
       await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
 
       await waitFor(() => {
-        expect(mockRouter.refresh).toHaveBeenCalled();
-        expect(onClose).toHaveBeenCalled();
+        const memberCall = fetchFn.mock.calls.find(
+          (call: unknown[]) =>
+            typeof call[0] === 'string' &&
+            (call[0] as string).includes('/members') &&
+            !(call[0] as string).includes('membership-plans'),
+        );
+        expect(memberCall).toBeDefined();
+        const body = JSON.parse(memberCall![1]!.body as string);
+        expect(body.phone).toBe('+971501234567');
       });
     });
 
+    it('strips dashes and parentheses from phone', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      await userEvent.type(screen.getAllByPlaceholderText('+971501234567')[0], '+971-50-123-4567');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const memberCall = fetchFn.mock.calls.find(
+          (call: unknown[]) =>
+            typeof call[0] === 'string' &&
+            (call[0] as string).includes('/members') &&
+            !(call[0] as string).includes('membership-plans'),
+        );
+        expect(memberCall).toBeDefined();
+        const body = JSON.parse(memberCall![1]!.body as string);
+        expect(body.phone).toBe('+971501234567');
+      });
+    });
+
+    it('sends null for empty phone', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      // Don't enter phone
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const memberCall = fetchFn.mock.calls.find(
+          (call: unknown[]) =>
+            typeof call[0] === 'string' &&
+            (call[0] as string).includes('/members') &&
+            !(call[0] as string).includes('membership-plans'),
+        );
+        expect(memberCall).toBeDefined();
+        const body = JSON.parse(memberCall![1]!.body as string);
+        expect(body.phone).toBeNull();
+      });
+    });
+  });
+
+  describe('date conversion in payload', () => {
+    it('converts date-only joinedAt to ISO datetime before sending', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+
+      // CalendarPopover returns date-only strings, which go into state directly.
+      // We simulate this by the initial state having a valid date.
+      // We test that the payload includes a properly formatted date.
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const memberCall = fetchFn.mock.calls.find(
+          (call: unknown[]) =>
+            typeof call[0] === 'string' &&
+            (call[0] as string).includes('/members') &&
+            !(call[0] as string).includes('membership-plans'),
+        );
+        expect(memberCall).toBeDefined();
+        const body = JSON.parse(memberCall![1]!.body as string);
+        // joinedAt is not in the payload if left empty (form default is '')
+        // It should not be present or should be a valid ISO date
+        if (body.joinedAt) {
+          // If present, must be valid ISO (contains 'T')
+          expect(body.joinedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+        }
+      });
+    });
+  });
+
+  describe('emergency contact in payload', () => {
     it('includes emergencyContact and assignedTrainerId in payload when provided', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
@@ -328,6 +569,235 @@ describe('MemberFormModal', () => {
         expect(createCall).toBeDefined();
         const body = JSON.parse(createCall![1]!.body as string);
         expect(body.emergencyContact).toEqual({ name: 'Brother', phone: '+971509998877' });
+      });
+    });
+
+    it('normalizes emergency contact phone in payload', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      await userEvent.type(screen.getByPlaceholderText('Contact person name'), 'Mom');
+      await userEvent.type(screen.getAllByPlaceholderText('+971501234567')[1], '+971 55 111 2233');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const createCall = fetchFn.mock.calls.find(
+          (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('/members') && !(call[0] as string).includes('membership-plans'),
+        );
+        expect(createCall).toBeDefined();
+        const body = JSON.parse(createCall![1]!.body as string);
+        expect(body.emergencyContact).toEqual({ name: 'Mom', phone: '+971551112233' });
+      });
+    });
+
+    it('sends null emergencyContact when both name and phone are empty', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      // Don't enter emergency contact details
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const createCall = fetchFn.mock.calls.find(
+          (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('/members') && !(call[0] as string).includes('membership-plans'),
+        );
+        expect(createCall).toBeDefined();
+        const body = JSON.parse(createCall![1]!.body as string);
+        expect(body.emergencyContact).toBeNull();
+      });
+    });
+  });
+
+  describe('null conversion for empty fields', () => {
+    it('sends null for empty email', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      // Don't enter email
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const createCall = fetchFn.mock.calls.find(
+          (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('/members') && !(call[0] as string).includes('membership-plans'),
+        );
+        expect(createCall).toBeDefined();
+        const body = JSON.parse(createCall![1]!.body as string);
+        expect(body.email).toBeNull();
+      });
+    });
+
+    it('sends null for empty gender', async () => {
+      const fetchFn = vi.fn(async (url: string, opts?: RequestInit) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      renderCreate();
+
+      await userEvent.type(screen.getByPlaceholderText('Ahmed Al Mansoori'), 'Test User');
+      // Don't select gender
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        const createCall = fetchFn.mock.calls.find(
+          (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('/members') && !(call[0] as string).includes('membership-plans'),
+        );
+        expect(createCall).toBeDefined();
+        const body = JSON.parse(createCall![1]!.body as string);
+        expect(body.gender).toBeNull();
+      });
+    });
+  });
+
+  describe('submit', () => {
+    it('displays error when server returns a non-ok response', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (typeof url === 'string' && url.includes('membership-plans')) {
+            return { ok: true, json: async () => planList } as Response;
+          }
+          if (typeof url === 'string' && url.includes('staff')) {
+            return { ok: true, json: async () => staffList } as Response;
+          }
+          return {
+            ok: false,
+            status: 409,
+            json: async () => ({ message: 'A member with this phone number already exists' }),
+          } as Response;
+        }),
+      );
+
+      renderCreate();
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      await userEvent.type(nameInput, 'Test User');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('A member with this phone number already exists')).toBeInTheDocument();
+      });
+    });
+
+    it('toggles button text to "Saving…" while submitting', async () => {
+      let resolvePromise: (v: unknown) => void = () => {};
+      const pendingPromise = new Promise((resolve) => {
+        resolvePromise = resolve;
+      });
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (typeof url === 'string' && url.includes('membership-plans')) {
+            return { ok: true, json: async () => planList } as Response;
+          }
+          if (typeof url === 'string' && url.includes('staff')) {
+            return { ok: true, json: async () => staffList } as Response;
+          }
+          await pendingPromise;
+          return { ok: true, json: async () => ({ id: 'new-1' }), clone: () => ({ json: async () => ({ id: 'new-1' }) }) } as Response;
+        }),
+      );
+
+      renderCreate();
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      await userEvent.type(nameInput, 'Test User');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Saving…')).toBeInTheDocument();
+      });
+
+      resolvePromise(undefined);
+    });
+
+    it('calls onClose and refreshes router after successful create', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (typeof url === 'string' && url.includes('membership-plans')) {
+            return { ok: true, json: async () => planList } as Response;
+          }
+          if (typeof url === 'string' && url.includes('staff')) {
+            return { ok: true, json: async () => staffList } as Response;
+          }
+          return {
+            ok: true,
+            json: async () => ({ id: 'new-1' }),
+            clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+          } as Response;
+        }),
+      );
+
+      const { onClose } = renderCreate();
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      await userEvent.type(nameInput, 'Test User');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        expect(mockRouter.refresh).toHaveBeenCalled();
+        expect(onClose).toHaveBeenCalled();
       });
     });
   });

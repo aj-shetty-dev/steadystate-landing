@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireServerUser } from '@/lib/auth-server';
+import { z } from 'zod';
+
+const previewSchema = z.object({
+  csv: z.string().min(1, 'CSV data is required.'),
+});
+
+function normalizePhone(raw: string): string {
+  const trimmed = raw.replace(/[\s\-\(\)\.]/g, '');
+  if (trimmed.startsWith('+')) return trimmed;
+  if (trimmed.startsWith('00')) return `+${trimmed.slice(2)}`;
+  if (trimmed.startsWith('0')) return `+971${trimmed.slice(1)}`;
+  return trimmed ? `+${trimmed}` : trimmed;
+}
 
 interface CsvRow {
   externalId?: string;
@@ -29,11 +42,17 @@ function parseCsv(text: string): CsvRow[] {
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
   const user = await requireServerUser();
-  const { csv } = (await req.json()) as { csv?: string };
+  const body = await req.json();
 
-  if (!csv) {
-    return NextResponse.json({ message: 'CSV data is required' }, { status: 400 });
+  const parsed = previewSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors[0]?.message ?? 'CSV data is required' },
+      { status: 400 },
+    );
   }
+
+  const csv = parsed.data.csv;
 
   const rows = parseCsv(csv);
   if (rows.length === 0) {
@@ -51,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     // Normalize: headers are lowercased during parse, so access by lowercase key
     const fullName = row.fullName || (row as any).fullname || '';
-    const phone = row.phone || '';
+    const phone = normalizePhone(row.phone || '');
     const email = row.email || '';
 
     if (!fullName) {

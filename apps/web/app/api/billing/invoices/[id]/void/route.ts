@@ -21,12 +21,12 @@ export async function POST(
   });
 
   if (!invoice) {
-    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
   }
 
   if (invoice.status === 'PAID') {
     return NextResponse.json(
-      { error: 'Cannot void a paid invoice' },
+      { message: 'Cannot void a paid invoice' },
       { status: 400 },
     );
   }

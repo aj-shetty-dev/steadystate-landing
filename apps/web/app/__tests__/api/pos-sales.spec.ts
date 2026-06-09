@@ -107,7 +107,7 @@ describe('POS Sales — Create', () => {
     expect(body.lines[0].nameSnapshot).toBe('Protein Shake');
   });
 
-  it('POST /api/pos/sales — rejects sale with no lines', async () => {
+  it('POST /api/pos/sales — returns 400 with fieldErrors when no lines', async () => {
     const req = createReq({
       method: 'POST',
       body: {
@@ -116,8 +116,10 @@ describe('POS Sales — Create', () => {
       },
     });
 
-    // Zod will throw on parse — the route uses .parse() not .safeParse()
-    await expect(posHandlers.POST(req as any)).rejects.toThrow();
+    const res = await posHandlers.POST(req as any);
+    const body = await jsonBody(res);
+    expect(res.status).toBe(400);
+    expect(body.fieldErrors).toBeDefined();
   });
 
   it('POST /api/pos/sales — rejects product line without refId', async () => {

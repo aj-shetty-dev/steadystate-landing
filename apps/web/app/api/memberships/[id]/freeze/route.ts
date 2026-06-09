@@ -5,8 +5,14 @@ import { FreezeStatus, MembershipStatus } from '@prisma/client';
 import { z } from 'zod';
 
 export const freezeInputSchema = z.object({
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  startDate: z.string().refine(
+    (v) => /^\d{4}-\d{2}-\d{2}/.test(v) && !isNaN(new Date(v).getTime()),
+    { message: 'Invalid date. Use YYYY-MM-DD format (e.g. 2025-06-09).' },
+  ),
+  endDate: z.string().refine(
+    (v) => /^\d{4}-\d{2}-\d{2}/.test(v) && !isNaN(new Date(v).getTime()),
+    { message: 'Invalid date. Use YYYY-MM-DD format (e.g. 2025-06-09).' },
+  ),
   reason: z.string().max(500).optional(),
 });
 
@@ -33,8 +39,13 @@ export async function POST(
 
   const parsed = freezeInputSchema.safeParse(body);
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }

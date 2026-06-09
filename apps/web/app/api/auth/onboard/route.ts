@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
 const bodySchema = z.object({
-  tenantName: z.string().min(1).max(100),
+  tenantName: z.string().min(1, 'Gym name is required.').max(100, 'Gym name must be 100 characters or fewer.'),
 });
 
 export async function POST(req: Request) {
@@ -13,7 +13,15 @@ export async function POST(req: Request) {
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ message: 'Invalid input' }, { status: 400 });
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return NextResponse.json(
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
+      { status: 400 },
+    );
   }
 
   const clerkUser = await currentUser();

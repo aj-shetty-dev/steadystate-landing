@@ -36,15 +36,20 @@ export async function POST(req: NextRequest) {
   const body = (await req.json()) as Record<string, unknown>;
   const parsed = salaryWindowSchema.safeParse(body);
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }
 
   if (parsed.data.startDay !== undefined && parsed.data.endDay !== undefined && parsed.data.startDay > parsed.data.endDay) {
     return NextResponse.json(
-      { error: 'startDay cannot be after endDay' },
+      { message: 'startDay cannot be after endDay' },
       { status: 400 },
     );
   }

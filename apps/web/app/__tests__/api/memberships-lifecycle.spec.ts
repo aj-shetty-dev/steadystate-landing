@@ -396,3 +396,154 @@ describe('POST /api/memberships/process-renewals', () => {
     expect(body.failed).toBe(1);
   });
 });
+
+// ── Freeze — edge cases and date formats ──────────────────────────────
+describe('POST /api/memberships/[id]/freeze — edge cases', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('accepts date-only strings YYYY-MM-DD (from CalendarPopover)', async () => {
+    mockPrisma.membership.findFirst.mockResolvedValue({ ...SAMPLE_MEMBERSHIP });
+    mockPrisma.membershipFreeze.findFirst.mockResolvedValue(null);
+    mockPrisma.membershipFreeze.create.mockResolvedValue({ id: 'frz-1', daysUsed: 14 });
+    mockPrisma.membership.update.mockResolvedValue({});
+    mockPrisma.member.update.mockResolvedValue({});
+
+    const req = createReq({
+      method: 'POST',
+      body: { startDate: '2026-06-15', endDate: '2026-06-29', reason: 'Travel' },
+    });
+    const res = await freezeHandlers.POST(req as any, params('ms-1'));
+
+    expect(res.status).toBe(201);
+  });
+
+  it('returns 400 with fieldErrors for missing startDate', async () => {
+    const req = createReq({
+      method: 'POST',
+      body: { endDate: '2026-06-29T00:00:00.000Z' },
+    });
+    const res = await freezeHandlers.POST(req as any, params('ms-1'));
+    const body = await jsonBody(res);
+
+    expect(res.status).toBe(400);
+    expect(body.fieldErrors).toBeDefined();
+  });
+
+  it('returns 400 with fieldErrors for invalid date format', async () => {
+    const req = createReq({
+      method: 'POST',
+      body: { startDate: 'not-a-date', endDate: '2026-06-29T00:00:00.000Z' },
+    });
+    const res = await freezeHandlers.POST(req as any, params('ms-1'));
+    const body = await jsonBody(res);
+
+    expect(res.status).toBe(400);
+    expect(body.fieldErrors).toBeDefined();
+  });
+
+  it('returns 400 when membership is EXPIRED', async () => {
+    mockPrisma.membership.findFirst.mockResolvedValue({ ...SAMPLE_MEMBERSHIP, status: 'EXPIRED' });
+    const req = createReq({
+      method: 'POST',
+      body: { startDate: '2026-06-15T00:00:00.000Z', endDate: '2026-06-29T00:00:00.000Z' },
+    });
+    const res = await freezeHandlers.POST(req as any, params('ms-1'));
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Change Plan — edge cases ─────────────────────────────────────────
+describe('POST /api/memberships/[id]/change-plan — edge cases', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 400 with fieldErrors when newPlanId is empty string', async () => {
+    const req = createReq({ method: 'POST', body: { newPlanId: '' } });
+    const res = await changePlanHandlers.POST(req as any, params('ms-1'));
+    const body = await jsonBody(res);
+
+    expect(res.status).toBe(400);
+    expect(body.fieldErrors).toBeDefined();
+    expect(body.fieldErrors.newPlanId).toBeTruthy();
+  });
+
+  it('accepts startDate as date-only string', async () => {
+    mockPrisma.membership.findFirst.mockResolvedValue({ ...SAMPLE_MEMBERSHIP });
+    mockPrisma.membershipPlan.findFirst.mockResolvedValue({
+      id: 'plan-2', nameEn: 'Platinum', durationDays: 60, priceAed: 49900, active: true, tenantId: MOCK_USER.tenantId,
+    });
+    mockPrisma.membership.update.mockResolvedValue({});
+    mockPrisma.membership.create.mockResolvedValue({
+      id: 'ms-new',
+      memberId: 'mem-1',
+      planId: 'plan-2',
+      status: 'ACTIVE',
+      startDate: new Date(),
+      endDate: new Date(),
+      member: { id: 'mem-1', fullName: 'Ahmed', phone: '+971501234567' },
+      plan: { id: 'plan-2', nameEn: 'Platinum', durationDays: 60, priceAed: 49900 },
+    });
+    mockPrisma.member.update.mockResolvedValue({});
+
+    const req = createReq({ method: 'POST', body: { newPlanId: 'plan-2', startDate: '2025-06-09' } });
+    const res = await changePlanHandlers.POST(req as any, params('ms-1'));
+
+    expect(res.status).toBe(201);
+  });
+
+  it('returns 404 when membership not found', async () => {
+    mockPrisma.membership.findFirst.mockResolvedValue(null);
+    const req = createReq({ method: 'POST', body: { newPlanId: 'plan-2' } });
+    const res = await changePlanHandlers.POST(req as any, params('ghost'));
+    expect(res.status).toBe(404);
+  });
+});
+
+// ── Unfreeze — edge cases ────────────────────────────────────────────
+describe('POST /api/memberships/[id]/unfreeze — edge cases', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('completes the active freeze and sets membership to ACTIVE', async () => {
+    mockPrisma.membership.findFirst.mockResolvedValue({
+      ...SAMPLE_MEMBERSHIP,
+      status: 'FROZEN',
+      freezes: [{ id: 'frz-1', status: 'ACTIVE', daysUsed: 14 }],
+    });
+    mockPrisma.membershipFreeze.update.mockResolvedValue({});
+    mockPrisma.membership.update.mockResolvedValue({ ...SAMPLE_MEMBERSHIP, status: 'ACTIVE', frozenUntil: null });
+    mockPrisma.member.update.mockResolvedValue({});
+
+    const req = createReq({ method: 'POST' });
+    const res = await unfreezeHandlers.POST(req as any, params('ms-1'));
+
+    expect(res.status).toBe(200);
+    // Verify freeze was completed
+    expect(mockPrisma.membershipFreeze.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'frz-1' },
+        data: expect.objectContaining({ status: 'COMPLETED' }),
+      }),
+    );
+  });
+});
+
+// ── Cancel — edge cases ──────────────────────────────────────────────
+describe('POST /api/memberships/[id]/cancel — edge cases', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('handles malformed JSON body gracefully', async () => {
+    mockPrisma.membership.findFirst.mockResolvedValue({ ...SAMPLE_MEMBERSHIP });
+    mockPrisma.membership.update.mockResolvedValue({ ...SAMPLE_MEMBERSHIP, status: 'CANCELLED' });
+    mockPrisma.member.update.mockResolvedValue({});
+
+    const req = new Request('http://localhost:3000/api/memberships/ms-1/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not-json',
+    });
+    (req as any).nextUrl = new URL('http://localhost:3000/api/memberships/ms-1/cancel');
+
+    const res = await cancelHandlers.POST(req as any, params('ms-1'));
+    // Should not throw — .catch(() => ({})) handles JSON parse error
+    expect(res.status).toBe(200);
+  });
+});

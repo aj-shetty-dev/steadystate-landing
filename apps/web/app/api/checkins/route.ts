@@ -16,7 +16,7 @@ const DEFAULT_TAKE = 200;
 // Helpers
 // ---------------------------------------------------------------------------
 function normalizePhone(raw: string): string {
-  const trimmed = raw.replace(/[\s\-()]/g, '');
+  const trimmed = raw.replace(/[\s\-\(\)\.]/g, '');
   if (trimmed.startsWith('+')) return trimmed;
   if (trimmed.startsWith('00')) return `+${trimmed.slice(2)}`;
   if (trimmed.startsWith('0')) return `+971${trimmed.slice(1)}`;
@@ -94,8 +94,13 @@ export async function POST(req: NextRequest) {
   // Validate input
   const parsed = checkInSchema.safeParse(body);
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }

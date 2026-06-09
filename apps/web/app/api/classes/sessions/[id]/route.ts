@@ -7,7 +7,7 @@ import { z } from 'zod';
 // Schema
 // ---------------------------------------------------------------------------
 const rescheduleSessionSchema = z.object({
-  startsAt: z.string().datetime(),
+  startsAt: z.string().refine((v) => /^\d{4}-\d{2}-\d{2}/.test(v) && !isNaN(new Date(v).getTime()), { message: "Invalid date. Use YYYY-MM-DD format (e.g. 2025-06-09)." }),
 });
 
 // ---------------------------------------------------------------------------
@@ -73,8 +73,13 @@ export async function PATCH(
   const parsed = rescheduleSessionSchema.safeParse(body);
 
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }

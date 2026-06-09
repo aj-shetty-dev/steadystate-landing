@@ -4,11 +4,12 @@ import { requireServerUser } from '@/lib/auth-server';
 
 // ---------------------------------------------------------------------------
 // POST /api/members/[id]/deactivate
+// PATCH /api/members/[id]/deactivate (frontend sends PATCH)
 // Deactivate a member (transaction: cancel memberships, cancel future
 // bookings, set member status to CANCELLED).
 // Matching NestJS MembersController.deactivate
 // ---------------------------------------------------------------------------
-export async function POST(
+async function handleDeactivate(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -57,3 +58,6 @@ export async function POST(
 
   return NextResponse.json(member);
 }
+
+export const POST = handleDeactivate;
+export const PATCH = handleDeactivate; // frontend sends PATCH

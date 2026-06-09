@@ -109,7 +109,18 @@ export async function POST(req: NextRequest) {
   const user = await requireServerUser();
   const body = await req.json();
 
-  const parsed = createSaleSchema.parse(body);
+  const parsed = createSaleSchema.safeParse(body);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return NextResponse.json(
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
+      { status: 400 },
+    );
+  }
 
   // ── Enrich lines with resolved pricing matching NestJS PosService.create ──
   const enrichedLines: Array<{
@@ -123,7 +134,7 @@ export async function POST(req: NextRequest) {
     totalAed: number;
   }> = [];
 
-  for (const l of parsed.lines) {
+  for (const l of parsed.data.lines) {
     let unit = l.unitPriceAed;
     let vatRate = l.vatRate ?? 5;
     let name = l.nameSnapshot;
@@ -181,7 +192,7 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
-      if (!ct.dropInPriceAed) {
+      if (ct.dropInPriceAed === undefined || ct.dropInPriceAed === null) {
         return NextResponse.json(
           { message: 'Class has no drop-in price' },
           { status: 400 },
@@ -238,27 +249,27 @@ export async function POST(req: NextRequest) {
   );
 
   // Validate references
-  if (parsed.memberId) {
+  if (parsed.data.memberId) {
     const m = await prisma.member.findFirst({
-      where: { id: parsed.memberId, tenantId: user.tenantId },
+      where: { id: parsed.data.memberId, tenantId: user.tenantId },
       select: { id: true },
     });
     if (!m) {
       return NextResponse.json({ message: 'Member not found' }, { status: 400 });
     }
   }
-  if (parsed.leadId) {
+  if (parsed.data.leadId) {
     const lead = await prisma.lead.findFirst({
-      where: { id: parsed.leadId, tenantId: user.tenantId },
+      where: { id: parsed.data.leadId, tenantId: user.tenantId },
       select: { id: true },
     });
     if (!lead) {
       return NextResponse.json({ message: 'Lead not found' }, { status: 400 });
     }
   }
-  if (parsed.staffId) {
+  if (parsed.data.staffId) {
     const staff = await prisma.staff.findFirst({
-      where: { id: parsed.staffId, tenantId: user.tenantId, active: true },
+      where: { id: parsed.data.staffId, tenantId: user.tenantId, active: true },
       select: { id: true },
     });
     if (!staff) {
@@ -272,11 +283,11 @@ export async function POST(req: NextRequest) {
   const sale = await prisma.sale.create({
     data: {
       tenantId: user.tenantId,
-      type: parsed.type,
-      memberId: parsed.memberId ?? null,
-      leadId: parsed.leadId ?? null,
-      staffId: parsed.staffId ?? null,
-      notes: parsed.notes ?? null,
+      type: parsed.data.type,
+      memberId: parsed.data.memberId ?? null,
+      leadId: parsed.data.leadId ?? null,
+      staffId: parsed.data.staffId ?? null,
+      notes: parsed.data.notes ?? null,
       subtotalAed: totals.subtotalAed,
       vatAed: totals.vatAed,
       totalAed: totals.totalAed,

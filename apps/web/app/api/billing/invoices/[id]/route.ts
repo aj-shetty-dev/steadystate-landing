@@ -23,7 +23,7 @@ export async function GET(
   });
 
   if (!invoice) {
-    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
   }
 
   return NextResponse.json(invoice);

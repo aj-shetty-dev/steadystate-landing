@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireServerUser } from '@/lib/auth-server';
 import type { MembershipStatus } from '@prisma/client';
+import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -12,12 +13,17 @@ const DEDUPE_WINDOW_MIN = 5;
 // Helpers
 // ---------------------------------------------------------------------------
 function normalizePhone(raw: string): string {
-  const trimmed = raw.replace(/[\s\-()]/g, '');
+  const trimmed = raw.replace(/[\s\-\(\)\.]/g, '');
   if (trimmed.startsWith('+')) return trimmed;
   if (trimmed.startsWith('00')) return `+${trimmed.slice(2)}`;
   if (trimmed.startsWith('0')) return `+971${trimmed.slice(1)}`;
   return `+${trimmed}`;
 }
+
+const byCodeSchema = z.object({
+  code: z.string().min(1, 'Check-in code is required.'),
+  phone: z.string().min(1, 'Phone number is required.'),
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/checkins/by-code
@@ -26,14 +32,20 @@ export async function POST(req: NextRequest) {
   const user = await requireServerUser();
   const body = await req.json();
 
-  const { code, phone } = body as { code?: string; phone?: string };
-
-  if (!code || !phone) {
+  const parsed = byCodeSchema.safeParse(body);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: 'code and phone are required' },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }
+
+  const { code, phone } = parsed.data;
 
   // Find the class session by its checkin code
   const session = await prisma.classSession.findFirst({
@@ -95,7 +107,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Transaction: create checkin and update member lastCheckinAt
+  // Look for a booking for this member + session to auto-link
+  const booking = await prisma.booking.findFirst({
+    where: {
+      tenantId: user.tenantId,
+      memberId: member.id,
+      sessionId: session.id,
+      status: 'BOOKED',
+    },
+  });
+
+  // Transaction: create checkin, update member lastCheckinAt, update booking if linked
   const ci = await prisma.$transaction(async (tx) => {
     const checkin = await tx.checkIn.create({
       data: {
@@ -110,6 +132,13 @@ export async function POST(req: NextRequest) {
       where: { id: member.id },
       data: { lastCheckinAt: now },
     });
+
+    if (booking) {
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { status: 'CHECKED_IN', checkedInAt: now },
+      });
+    }
 
     return checkin;
   });

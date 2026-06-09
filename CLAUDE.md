@@ -2,6 +2,10 @@
 
 > **Purpose**: This file encodes enterprise-quality development standards. Every change you make MUST adhere to these rules. They exist because systemic issues (enum mismatches, missing validation, zero test coverage on critical paths) were discovered after partner review — this is the fix at the root.
 
+> **Testing**: For comprehensive module testing instructions, see
+> [`.claude/instructions/testing-guide.md`](.claude/instructions/testing-guide.md).
+> To start filling test gaps: *"Follow the testing guide. Test the [module] module end-to-end."*
+
 ---
 
 ## Rule 0: Always Verify, Never Assume

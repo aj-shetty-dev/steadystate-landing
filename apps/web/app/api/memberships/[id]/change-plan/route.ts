@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireServerUser } from '@/lib/auth-server';
 import { MembershipStatus } from '@prisma/client';
+import { z } from 'zod';
+
+const changePlanSchema = z.object({
+  newPlanId: z.string().min(1, 'newPlanId is required.'),
+  startDate: z.string().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/memberships/[id]/change-plan
@@ -13,11 +19,21 @@ export async function POST(
   const user = await requireServerUser();
   const { id } = await params;
   const body = await req.json();
-  const { newPlanId, startDate } = body as { newPlanId?: string; startDate?: string };
 
-  if (!newPlanId) {
-    return NextResponse.json({ message: 'newPlanId is required' }, { status: 400 });
+  const parsed = changePlanSchema.safeParse(body);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return NextResponse.json(
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
+      { status: 400 },
+    );
   }
+
+  const { newPlanId, startDate } = parsed.data;
 
   const membership = await prisma.membership.findFirst({
     where: { id, tenantId: user.tenantId },

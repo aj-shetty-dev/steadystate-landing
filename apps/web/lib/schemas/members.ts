@@ -15,6 +15,19 @@ export const phoneSchema = z.preprocess(
     .optional(),
 );
 
+// Accepts both ISO 8601 datetime strings AND date-only YYYY-MM-DD strings
+// (CalendarPopover sends dates as "2025-06-09", not full ISO datetimes).
+// Ensures the value is a real calendar date.
+const dateField = z.string().refine(
+  (val) => {
+    // Must start with YYYY-MM-DD pattern, optionally followed by time portion
+    if (!/^\d{4}-\d{2}-\d{2}/.test(val)) return false;
+    const d = new Date(val);
+    return !isNaN(d.getTime());
+  },
+  { message: 'Invalid date. Use YYYY-MM-DD format (e.g. 2025-06-09).' },
+);
+
 // Aligned with Prisma MembershipStatus enum
 const MEMBERSHIP_STATUSES = [
   'ACTIVE',
@@ -26,20 +39,23 @@ const MEMBERSHIP_STATUSES = [
   'PENDING_PAYMENT',
 ] as const;
 
+// Aligned with Prisma Gender enum: MALE | FEMALE | OTHER | UNSPECIFIED
+const GENDERS = ['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED'] as const;
+
 export const createMemberSchema = z.object({
-  fullName: z.string().min(1).max(200).trim(),
+  fullName: z.string().trim().min(1, 'Full name is required.').max(200, 'Full name must be 200 characters or fewer.'),
   phone: phoneSchema,
-  email: z.string().email().optional().nullable(),
+  email: z.string().email('Please enter a valid email.').optional().nullable(),
   membershipStatus: z.enum(MEMBERSHIP_STATUSES).default('ACTIVE'),
-  joinedAt: z.string().datetime().optional(),
+  joinedAt: dateField.optional(),
   preferredLocale: z.enum(['EN', 'AR']).default('EN'),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional().nullable(),
-  dateOfBirth: z.string().datetime().optional().nullable(),
-  medicalNotes: z.string().max(1000).optional().nullable(),
+  gender: z.enum(GENDERS).optional().nullable(),
+  dateOfBirth: dateField.optional().nullable(),
+  medicalNotes: z.string().max(1000, 'Medical notes must be 1000 characters or fewer.').optional().nullable(),
   emergencyContact: z.any().optional().nullable(),
   assignedTrainerId: z.string().optional().nullable(),
 });
 
 export const updateMemberSchema = createMemberSchema.partial().extend({
-  membershipExpiresAt: z.string().datetime().optional().nullable(),
+  membershipExpiresAt: dateField.optional().nullable(),
 });

@@ -61,8 +61,13 @@ export async function PATCH(
   const parsed = updateClassTypeSchema.safeParse(body);
 
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }

@@ -34,6 +34,28 @@ function isDetail(m: MemberRow | MemberDetail): m is MemberDetail {
   return 'preferredLocale' in m;
 }
 
+/** Convert a date-only string (YYYY-MM-DD) to ISO datetime for the API. */
+function toISODateTime(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  // If already ISO, return as-is
+  if (dateStr.includes('T')) return dateStr;
+  // Convert date-only to ISO datetime (midnight UTC)
+  return new Date(dateStr + 'T00:00:00').toISOString();
+}
+
+/** Quick client-side phone validation: must be E.164 or E.164-like with spaces/dashes. */
+function looksLikePhone(val: string): boolean {
+  const stripped = val.replace(/[\s\-\(\)\.]/g, '');
+  if (!stripped) return true; // empty is fine (phone is optional)
+  return /^\+[1-9]\d{6,14}$/.test(stripped);
+}
+
+/** Quick client-side email validation. */
+function looksLikeEmail(val: string): boolean {
+  if (!val.trim()) return true; // empty is fine (email is optional)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+}
+
 const STATUS_OPTIONS = [
   { value: 'ACTIVE',          label: 'Active' },
   { value: 'PENDING',         label: 'Pending' },
@@ -45,10 +67,11 @@ const STATUS_OPTIONS = [
 ];
 const LOCALE_OPTIONS = [{ value: 'EN', label: 'English' }, { value: 'AR', label: 'العربية (Arabic)' }];
 const GENDER_OPTIONS = [
-  { value: '',       label: 'Not specified' },
-  { value: 'MALE',   label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER',  label: 'Other' },
+  { value: '',            label: 'Not specified' },
+  { value: 'MALE',        label: 'Male' },
+  { value: 'FEMALE',      label: 'Female' },
+  { value: 'OTHER',       label: 'Other' },
+  { value: 'UNSPECIFIED', label: 'Unspecified' },
 ];
 
 function toDateInput(iso: string | null | undefined): string {
@@ -61,6 +84,7 @@ export function MemberFormModal({ member, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [plans, setPlans] = useState<MembershipPlanRow[]>([]);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const isEdit = Boolean(member);
@@ -110,9 +134,39 @@ export function MemberFormModal({ member, onClose }: Props) {
       setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
+  /** Returns true if client-side validation passes; sets fieldErrors otherwise. */
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+
+    if (!form.fullName.trim()) {
+      errs.fullName = 'Full name is required.';
+    }
+
+    if (form.phone.trim() && !looksLikePhone(form.phone)) {
+      errs.phone = 'Phone must be E.164 format (e.g. +971501234567).';
+    }
+
+    if (form.email.trim() && !looksLikeEmail(form.email)) {
+      errs.email = 'Please enter a valid email address.';
+    }
+
+    if (form.emergencyContactPhone.trim() && !looksLikePhone(form.emergencyContactPhone)) {
+      errs.emergencyContactPhone = 'Emergency contact phone must be E.164 format.';
+    }
+
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+
+    if (!validate()) {
+      return;
+    }
+
     setSaving(true);
 
     const payload: Record<string, unknown> = {
@@ -128,10 +182,11 @@ export function MemberFormModal({ member, onClose }: Props) {
     }
     if (form.email.trim()) payload.email = form.email.trim();
     else payload.email = null;
-    if (form.joinedAt) payload.joinedAt = form.joinedAt;
+    // Convert date-only strings to ISO datetime for API compatibility
+    if (form.joinedAt) payload.joinedAt = toISODateTime(form.joinedAt);
     if (form.gender) payload.gender = form.gender;
     else payload.gender = null;
-    if (form.dateOfBirth) payload.dateOfBirth = form.dateOfBirth;
+    if (form.dateOfBirth) payload.dateOfBirth = toISODateTime(form.dateOfBirth);
     else payload.dateOfBirth = null;
     if (form.medicalNotes.trim()) payload.medicalNotes = form.medicalNotes.trim();
     else payload.medicalNotes = null;
@@ -152,7 +207,7 @@ export function MemberFormModal({ member, onClose }: Props) {
         method: isEdit ? 'PATCH' : 'POST',
         body: JSON.stringify(payload),
       });
-      
+
       // On create, optionally assign a membership plan
       if (!isEdit && form.planId) {
         if (created?.id) {
@@ -208,7 +263,7 @@ export function MemberFormModal({ member, onClose }: Props) {
           <div className="space-y-4">
             <p className="text-[11px] font-semibold text-text3 uppercase tracking-widest">Identity</p>
 
-            <Field label="Full Name" required>
+            <Field label="Full Name" required error={fieldErrors.fullName}>
               <input
                 type="text" required maxLength={200}
                 placeholder="Ahmed Al Mansoori"
@@ -217,7 +272,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               />
             </Field>
 
-            <Field label="Phone" hint="E.164 format — e.g. +971501234567">
+            <Field label="Phone" hint="E.164 format — e.g. +971501234567" error={fieldErrors.phone}>
               <input
                 type="tel" placeholder="+971501234567"
                 value={form.phone} onChange={set('phone')}
@@ -225,7 +280,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               />
             </Field>
 
-            <Field label="Email">
+            <Field label="Email" error={fieldErrors.email}>
               <input
                 type="email" placeholder="ahmed@example.com"
                 value={form.email} onChange={set('email')}
@@ -312,7 +367,7 @@ export function MemberFormModal({ member, onClose }: Props) {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Phone">
+              <Field label="Phone" error={fieldErrors.emergencyContactPhone}>
                 <input
                   type="tel" placeholder="+971501234567"
                   value={form.emergencyContactPhone} onChange={set('emergencyContactPhone')}
@@ -377,7 +432,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               Cancel
             </button>
             <button
-              type="submit" disabled={saving}
+              type="submit" disabled={saving || !form.fullName.trim()}
               className="flex-1 px-4 py-2.5 rounded-lg bg-green text-white text-sm font-medium hover:bg-green/90 disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Member'}
@@ -389,14 +444,15 @@ export function MemberFormModal({ member, onClose }: Props) {
   );
 }
 
-function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
+function Field({ label, required, hint, error, children }: { label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium text-text2 uppercase tracking-wide">
         {label}{required && <span className="text-error ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <p className="text-xs text-text3">{hint}</p>}
+      {error && <p className="text-xs text-error">{error}</p>}
+      {!error && hint && <p className="text-xs text-text3">{hint}</p>}
     </div>
   );
 }

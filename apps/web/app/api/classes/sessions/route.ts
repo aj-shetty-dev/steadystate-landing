@@ -39,7 +39,7 @@ async function generateUniqueCode(): Promise<string> {
 const createSessionSchema = z.object({
   classTypeId: z.string().min(1),
   instructorId: z.string().optional(),
-  startsAt: z.string().datetime(),
+  startsAt: z.string().refine((v) => /^\d{4}-\d{2}-\d{2}/.test(v) && !isNaN(new Date(v).getTime()), { message: "Invalid date. Use YYYY-MM-DD format (e.g. 2025-06-09)." }),
   durationMin: z.number().int().positive().optional(),
   room: z.string().optional(),
   capacityOverride: z.number().int().positive().optional(),
@@ -58,6 +58,14 @@ export async function GET(req: NextRequest) {
   const instructorId = qs.get('instructorId') ?? undefined;
   const room = qs.get('room') ?? undefined;
   const status = qs.get('status') ?? undefined;
+
+  const validStatuses = ['SCHEDULED', 'CANCELLED', 'COMPLETED'];
+  if (status && !validStatuses.includes(status)) {
+    return NextResponse.json(
+      { message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
+      { status: 400 },
+    );
+  }
 
   const items = await prisma.classSession.findMany({
     where: {
@@ -97,8 +105,13 @@ export async function POST(req: NextRequest) {
 
   const parsed = createSessionSchema.safeParse(body);
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }

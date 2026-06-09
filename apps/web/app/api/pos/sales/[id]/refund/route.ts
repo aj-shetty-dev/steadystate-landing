@@ -46,10 +46,21 @@ export async function POST(
   }
 
   const body = await req.json().catch(() => ({}));
-  const parsed = refundBodySchema.parse(body);
+  const parsed = refundBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return NextResponse.json(
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
+      { status: 400 },
+    );
+  }
 
   const remaining = sale.totalAed - sale.refundedAed;
-  const refundAmount = parsed.amountAed ?? remaining;
+  const refundAmount = parsed.data.amountAed ?? remaining;
 
   if (refundAmount <= 0) {
     return NextResponse.json(

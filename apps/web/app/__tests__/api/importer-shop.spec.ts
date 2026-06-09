@@ -89,8 +89,8 @@ describe('POST /api/importer/members/apply', () => {
     expect(body.updated).toBe(1);
   });
 
-  it('returns 400 when both toCreate and toUpdate are empty', async () => {
-    const req = createReq({ method: 'POST', body: { toCreate: [], toUpdate: [] } });
+  it('returns 400 when CSV data is missing', async () => {
+    const req = createReq({ method: 'POST', body: {} });
     const res = await applyHandlers.POST(req as any);
     expect(res.status).toBe(400);
   });

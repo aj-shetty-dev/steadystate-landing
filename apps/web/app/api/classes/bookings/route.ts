@@ -20,8 +20,13 @@ export async function POST(req: NextRequest) {
 
   const parsed = bookingInputSchema.safeParse(body);
   if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.errors) {
+      const field = issue.path.join('.') || 'form';
+      if (!fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
     return NextResponse.json(
-      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { message: Object.values(fieldErrors).join('; '), fieldErrors },
       { status: 400 },
     );
   }
@@ -104,7 +109,8 @@ export async function POST(req: NextRequest) {
 
   const eligible =
     member.membershipStatus === 'ACTIVE' || member.membershipStatus === 'FROZEN';
-  if (!eligible && !session.classType.dropInPriceAed) {
+  const hasDropIn = session.classType.dropInPriceAed !== undefined && session.classType.dropInPriceAed !== null;
+  if (!eligible && !hasDropIn) {
     return NextResponse.json(
       { message: 'Member has no active membership and no drop-in price configured' },
       { status: 400 },
