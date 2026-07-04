@@ -363,6 +363,7 @@ export interface MemberDetail extends MemberRow {
   source: string;
   emergencyContact: unknown;
   assignedTrainerId: string | null;
+  assignedTrainer?: { id: string; fullName: string } | null;
 }
 
 export interface CheckinRow {

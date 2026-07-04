@@ -813,4 +813,103 @@ describe('MemberFormModal', () => {
       // But the structure is verified in render tests
     });
   });
+
+  describe('unsaved changes confirmation', () => {
+    it('shows discard confirmation dialog when closing with unsaved changes', async () => {
+      renderCreate();
+
+      // Type something to mark form dirty
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      fireEvent.change(nameInput, { target: { value: 'Test' } });
+
+      // Try to close via Cancel button
+      fireEvent.click(screen.getByText('Cancel'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Discard changes?')).toBeInTheDocument();
+      });
+    });
+
+    it('keeps editing when user clicks "Keep editing"', async () => {
+      const { onClose } = renderCreate();
+
+      // Mark form dirty and trigger close confirmation
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      fireEvent.change(nameInput, { target: { value: 'Test' } });
+
+      fireEvent.click(screen.getByText('Cancel'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Discard changes?')).toBeInTheDocument();
+      });
+
+      // Click "Keep editing" — modal stays open
+      fireEvent.click(screen.getByText('Keep editing'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+      });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('discards changes when user clicks "Discard" in confirmation', async () => {
+      const { onClose } = renderCreate();
+
+      // Mark form dirty
+      const nameInput = screen.getByPlaceholderText('Ahmed Al Mansoori');
+      fireEvent.change(nameInput, { target: { value: 'Test' } });
+
+      // Trigger close
+      fireEvent.click(screen.getByText('Cancel'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Discard changes?')).toBeInTheDocument();
+      });
+
+      // Confirm discard
+      fireEvent.click(screen.getByText('Discard'));
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalled();
+      });
+    });
+
+    it('closes immediately when form is clean (no unsaved changes)', () => {
+      const { onClose } = renderCreate();
+
+      // Don't type anything — form is clean
+      fireEvent.click(screen.getByText('Cancel'));
+
+      // Should close without confirmation
+      expect(onClose).toHaveBeenCalled();
+      expect(screen.queryByText('Discard changes?')).not.toBeInTheDocument();
+    });
+
+    it('does NOT show confirmation after successful submit (form no longer dirty)', async () => {
+      const fetchFn = vi.fn(async (url: string) => {
+        if (typeof url === 'string' && url.includes('membership-plans')) {
+          return { ok: true, json: async () => planList } as Response;
+        }
+        if (typeof url === 'string' && url.includes('staff')) {
+          return { ok: true, json: async () => staffList } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ id: 'new-1' }),
+          clone: () => ({ json: async () => ({ id: 'new-1' }) }),
+        } as Response;
+      });
+      vi.stubGlobal('fetch', fetchFn);
+
+      const { onClose } = renderCreate();
+
+      // Fill name and submit
+      fireEvent.change(screen.getByPlaceholderText('Ahmed Al Mansoori'), { target: { value: 'Test User' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Member' }));
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalled();
+      });
+    });
+  });
 });

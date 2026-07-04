@@ -303,6 +303,9 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
                 />
               </div>
             </div>
+            {freezeStart && freezeEnd && freezeEnd < freezeStart && (
+              <p className="text-xs text-error">End date must be on or after the start date.</p>
+            )}
             <div className="flex gap-3 mt-5">
               <button
                 onClick={() => setShowFreeze(false)}
@@ -317,9 +320,6 @@ export function MembershipActionsClient({ memberId, membership }: Props) {
               >
                 Freeze
               </button>
-              {freezeStart && freezeEnd && freezeEnd < freezeStart && (
-                <p className="text-xs text-error mt-2">End date must be on or after the start date.</p>
-              )}
             </div>
           </div>
         </div>

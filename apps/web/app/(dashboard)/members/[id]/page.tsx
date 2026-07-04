@@ -149,8 +149,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                     {emergencyContact.phone && <> · {emergencyContact.phone}</>}
                   </span>
                 )}
-                {member.assignedTrainerId && (
-                  <Badge tone="neutral">Has assigned trainer</Badge>
+                {member.assignedTrainer && (
+                  <Badge tone="neutral">Trainer: {member.assignedTrainer.fullName}</Badge>
                 )}
               </div>
             )}
@@ -158,6 +158,27 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           <MemberDetailClient member={member} />
         </div>
       </div>
+
+      {/* Personal details */}
+      {(member.dateOfBirth || member.medicalNotes) && (
+        <section>
+          <h2 className="text-base font-semibold tracking-tight text-text mb-3">Personal</h2>
+          <div className="bg-surface border border-border rounded-lg divide-y divide-border">
+            {member.dateOfBirth && (
+              <div className="flex justify-between items-center px-6 py-3">
+                <span className="text-text2 text-sm">Date of birth</span>
+                <span className="text-text tabular-nums">{fmt(member.dateOfBirth)}</span>
+              </div>
+            )}
+            {member.medicalNotes && (
+              <div className="px-6 py-3">
+                <span className="text-text2 text-sm block mb-1">Medical notes</span>
+                <span className="text-text text-sm whitespace-pre-wrap">{member.medicalNotes}</span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Membership */}
       <section>
@@ -194,7 +215,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
               </div>
               <div className="flex justify-between items-center py-2.5">
                 <dt className="text-text2 text-sm">Price</dt>
-                <dd className="text-text tabular-nums">AED {activeMembership.plan.priceAed.toFixed(2)}</dd>
+                <dd className="text-text tabular-nums">AED {(activeMembership.plan.priceAed / 100).toFixed(2)}</dd>
               </div>
             </dl>
             <MembershipActionsClient memberId={member.id} membership={activeMembership} />

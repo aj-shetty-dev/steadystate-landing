@@ -2,13 +2,13 @@
 
 import { MoreHorizontal, Pencil, Upload, UserX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ConfirmDialog } from '../../../components/ui/confirm-dialog';
 import { PageHeader } from '../../../components/ui/page-header';
 import { TableSkeleton } from '../../../components/skeletons/table-skeleton';
 import { StatusBadge } from '../../../components/ui/status-badge';
-import type { MemberRow, Paginated } from '../../../lib/api';
+import type { MemberDetail, MemberRow, Paginated } from '../../../lib/api';
 import { apiFetch } from '../../../lib/api';
 import { CsvImportModal } from './csv-import-modal';
 import { MemberFormModal } from './member-form-modal';
@@ -45,13 +45,21 @@ function RowActionsMenu({
   deactivating,
 }: {
   member: MemberRow;
-  onEdit: () => void;
+  onEdit: (m: MemberRow) => void;
   onDeactivate: () => void;
   deactivating: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
+
+  // Close dropdown on scroll (prevents floating menu detached from button)
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true); // capture phase catches table scroll
+    return () => window.removeEventListener('scroll', close, true);
+  }, [open]);
 
   function handleOpen(e: React.MouseEvent) {
     e.stopPropagation();
@@ -81,7 +89,7 @@ function RowActionsMenu({
             style={{ top: pos.top, right: pos.right }}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setOpen(false); onEdit(); }}
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onEdit(member); }}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-text hover:bg-surface2 transition-colors"
             >
               <Pencil className="w-3.5 h-3.5 text-text3 shrink-0" />
@@ -160,20 +168,36 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
 
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [editMember, setEditMember] = useState<MemberRow | null>(null);
+  const [editMember, setEditMember] = useState<MemberRow | MemberDetail | null>(null);
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<MemberRow | null>(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+
+  async function handleEdit(m: MemberRow) {
+    setLoadingEdit(true);
+    try {
+      const detail = await apiFetch<MemberDetail>(`/members/${m.id}`);
+      setEditMember(detail);
+    } catch {
+      setEditMember(m); // fall back to row data if fetch fails
+    } finally {
+      setLoadingEdit(false);
+    }
+  }
 
   async function handleDeactivate(m: MemberRow) {
     if (m.membershipStatus === 'CANCELLED') return;
     setDeactivating(m.id);
+    setDeactivateError(null);
     setOptimisticCancelled((prev) => new Set(prev).add(m.id));
     try {
       await apiFetch(`/members/${m.id}/deactivate`, { method: 'PATCH' });
             router.refresh();
-    } catch {
+    } catch (err) {
+      setDeactivateError((err as Error).message || 'Failed to deactivate member');
       setOptimisticCancelled((prev) => {
         const next = new Set(prev);
         next.delete(m.id);
@@ -227,14 +251,25 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
       </div>
 
       {/* Search */}
-      <div className="mb-4">
+      <div className="mb-4 relative w-full max-w-sm">
         <input
           type="search"
           placeholder="Search by name, phone, or email…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder-text3 focus:outline-none focus:ring-2 focus:ring-green/40 focus:border-green/60 transition-colors"
+          className="w-full rounded-lg border border-border bg-surface pl-3 pr-8 py-2 text-sm text-text placeholder-text3 focus:outline-none focus:ring-2 focus:ring-green/40 focus:border-green/60 transition-colors"
         />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-text3 hover:text-text transition-colors"
+            aria-label="Clear search"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div
@@ -288,21 +323,30 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
                     return (
                       <tr
                         key={m.id}
-                        className={`border-t border-border transition-all duration-300 ${
-                          isCancelled ? 'opacity-40 pointer-events-none' : 'hover:bg-surface2/60'
+                        tabIndex={isCancelled ? undefined : 0}
+                        role="link"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !isCancelled) {
+                            e.preventDefault();
+                            router.push(`/members/${m.id}`);
+                          }
+                        }}
+                        className={`border-t border-border transition-all duration-300 outline-none focus:ring-2 focus:ring-inset focus:ring-green/30 ${
+                          isCancelled ? 'opacity-40 pointer-events-none' : 'hover:bg-surface2/60 cursor-pointer'
                         }`}
+                        onClick={() => { if (!isCancelled) router.push(`/members/${m.id}`); }}
                       >
                         <td
-                          onClick={() => router.push(`/members/${m.id}`)}
-                          className="px-4 py-3 text-green font-medium cursor-pointer w-[25%]"
+                          className="px-4 py-3 text-green font-medium w-[25%] truncate"
+                          title={m.fullName}
                         >
                           {m.fullName}
                         </td>
-                        <td className="px-4 py-3 text-text2 tabular-nums w-[15%]">{m.phone ?? '—'}</td>
+                        <td className="px-4 py-3 text-text2 tabular-nums w-[15%] truncate" title={m.phone ?? undefined}>{m.phone ?? '—'}</td>
                         <td className="px-4 py-3 w-[10%]">
                           <StatusBadge status={m.membershipStatus} />
                         </td>
-                        <td className="px-4 py-3 text-text2 w-[15%]">
+                        <td className="px-4 py-3 text-text2 w-[15%] truncate" title={m.activePlanNames.join(', ') || undefined}>
                           {m.activePlanNames.length > 0
                             ? m.activePlanNames.join(', ')
                             : <span className="text-text3">—</span>}
@@ -313,7 +357,7 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
                         <td className="px-4 py-3 text-right w-[5%]">
                           <RowActionsMenu
                             member={m}
-                            onEdit={() => setEditMember(m)}
+                            onEdit={handleEdit}
                             onDeactivate={() => setConfirmTarget(m)}
                             deactivating={deactivating === m.id}
                           />
@@ -360,10 +404,18 @@ export function MembersClient({ data, initialSearch, initialStatus }: Props) {
         )}
       </div>
 
+      {/* Deactivate error toast */}
+      {deactivateError && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-lg bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20 shadow-lg flex items-center gap-3">
+          <span className="flex-1">{deactivateError}</span>
+          <button onClick={() => setDeactivateError(null)} className="text-error/60 hover:text-error font-medium text-xs shrink-0">Dismiss</button>
+        </div>
+      )}
+
       {/* Modals */}
       {showAdd && <MemberFormModal onClose={() => setShowAdd(false)} />}
       {showImport && <CsvImportModal onClose={() => setShowImport(false)} />}
-      {editMember && <MemberFormModal member={editMember} onClose={() => setEditMember(null)} />}
+      {editMember && <MemberFormModal member={editMember as MemberDetail} onClose={() => setEditMember(null)} />}
       {confirmTarget && (
         <ConfirmDialog
           title="Deactivate member"

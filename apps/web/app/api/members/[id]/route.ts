@@ -30,6 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       source: true,
       emergencyContact: true,
       assignedTrainerId: true,
+      assignedTrainer: { select: { id: true, fullName: true } },
     },
   });
 

@@ -2,7 +2,7 @@
 
 import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarPopover } from '../../../components/ui/calendar-popover';
 import { SelectField } from '../../../components/ui/select-field';
 import { apiFetch } from '../../../lib/api';
@@ -67,11 +67,10 @@ const STATUS_OPTIONS = [
 ];
 const LOCALE_OPTIONS = [{ value: 'EN', label: 'English' }, { value: 'AR', label: 'العربية (Arabic)' }];
 const GENDER_OPTIONS = [
-  { value: '',            label: 'Not specified' },
+  { value: '',            label: 'Prefer not to say' },
   { value: 'MALE',        label: 'Male' },
   { value: 'FEMALE',      label: 'Female' },
   { value: 'OTHER',       label: 'Other' },
-  { value: 'UNSPECIFIED', label: 'Unspecified' },
 ];
 
 function toDateInput(iso: string | null | undefined): string {
@@ -87,6 +86,8 @@ export function MemberFormModal({ member, onClose }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [plans, setPlans] = useState<MembershipPlanRow[]>([]);
   const [staff, setStaff] = useState<StaffRow[]>([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const isEdit = Boolean(member);
 
   const detail = member && isDetail(member) ? member : null;
@@ -122,16 +123,26 @@ export function MemberFormModal({ member, onClose }: Props) {
     planStartDate: '',
   });
 
-  // Close on Escape
+  const handleClose = useCallback(() => {
+    if (isDirty) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
+  }, [isDirty, onClose]);
+
+  // Close on Escape (with dirty check)
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [handleClose]);
 
   function set(field: keyof FormState) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      setIsDirty(true);
       setForm((f) => ({ ...f, [field]: e.target.value }));
+    };
   }
 
   /** Returns true if client-side validation passes; sets fieldErrors otherwise. */
@@ -211,15 +222,24 @@ export function MemberFormModal({ member, onClose }: Props) {
       // On create, optionally assign a membership plan
       if (!isEdit && form.planId) {
         if (created?.id) {
-          const start = form.planStartDate
-            ? new Date(form.planStartDate + 'T00:00:00').toISOString()
-            : new Date().toISOString();
-          await apiFetch('/memberships', {
-            method: 'POST',
-            body: JSON.stringify({ memberId: created.id, planId: form.planId, startDate: start }),
-          });
+          try {
+            const start = form.planStartDate
+              ? new Date(form.planStartDate + 'T00:00:00').toISOString()
+              : new Date().toISOString();
+            await apiFetch('/memberships', {
+              method: 'POST',
+              body: JSON.stringify({ memberId: created.id, planId: form.planId, startDate: start }),
+            });
+          } catch (planErr) {
+            // Member was created but plan assignment failed — warn the user
+            setError(`Member created but plan assignment failed: ${(planErr as Error).message}`);
+            // Don't re-throw — let the modal stay open so the user sees the warning
+            setSaving(false);
+            return;
+          }
         }
       }
+      setIsDirty(false);
       router.refresh();
       onClose();
     } catch (err) {
@@ -232,7 +252,7 @@ export function MemberFormModal({ member, onClose }: Props) {
   return (
     <div
       ref={overlayRef}
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onClick={(e) => { if (e.target === overlayRef.current) handleClose(); }}
       className="fixed inset-0 z-50 flex justify-end bg-black/40"
       role="dialog"
       aria-modal="true"
@@ -243,7 +263,7 @@ export function MemberFormModal({ member, onClose }: Props) {
         <div className="shrink-0 flex items-center justify-between px-6 py-5 border-b border-border">
           <h2 className="text-lg font-semibold text-text">{isEdit ? 'Edit Member' : 'Add Member'}</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-md p-1.5 text-text3 hover:text-text hover:bg-surface2 transition-colors"
             aria-label="Close"
           >
@@ -274,7 +294,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               />
             </Field>
 
-            <Field label="Phone" hint="E.164 format — e.g. +971501234567" error={fieldErrors.phone}>
+            <Field label="Phone" hint="e.g. +971501234567 or 0501234567 — spaces and dashes are fine" error={fieldErrors.phone}>
               <input
                 type="tel" placeholder="+971501234567"
                 value={form.phone} onChange={set('phone')}
@@ -301,7 +321,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               <Field label="Status" required>
                 <SelectField
                   value={form.membershipStatus}
-                  onChange={(v) => setForm((f) => ({ ...f, membershipStatus: v }))}
+                  onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, membershipStatus: v })); }}
                   options={STATUS_OPTIONS}
                 />
               </Field>
@@ -309,7 +329,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               <Field label="Joined Date">
                 <CalendarPopover
                   value={form.joinedAt}
-                  onChange={(v) => setForm((f) => ({ ...f, joinedAt: v }))}
+                  onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, joinedAt: v })); }}
                 />
               </Field>
             </div>
@@ -325,7 +345,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               <Field label="Gender">
                 <SelectField
                   value={form.gender}
-                  onChange={(v) => setForm((f) => ({ ...f, gender: v }))}
+                  onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, gender: v })); }}
                   options={GENDER_OPTIONS}
                 />
               </Field>
@@ -333,7 +353,7 @@ export function MemberFormModal({ member, onClose }: Props) {
               <Field label="Date of Birth">
                 <CalendarPopover
                   value={form.dateOfBirth}
-                  onChange={(v) => setForm((f) => ({ ...f, dateOfBirth: v }))}
+                  onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, dateOfBirth: v })); }}
                 />
               </Field>
             </div>
@@ -341,7 +361,7 @@ export function MemberFormModal({ member, onClose }: Props) {
             <Field label="Language">
               <SelectField
                 value={form.preferredLocale}
-                onChange={(v) => setForm((f) => ({ ...f, preferredLocale: v }))}
+                onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, preferredLocale: v })); }}
                 options={LOCALE_OPTIONS}
               />
             </Field>
@@ -381,7 +401,7 @@ export function MemberFormModal({ member, onClose }: Props) {
             <Field label="Assigned Trainer">
               <SelectField
                 value={form.assignedTrainerId}
-                onChange={(v) => setForm((f) => ({ ...f, assignedTrainerId: v }))}
+                onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, assignedTrainerId: v })); }}
                 options={[
                   { value: '', label: 'No trainer assigned' },
                   ...staff
@@ -403,7 +423,7 @@ export function MemberFormModal({ member, onClose }: Props) {
                 <Field label="Plan">
                   <SelectField
                     value={form.planId}
-                    onChange={(v) => setForm((f) => ({ ...f, planId: v }))}
+                    onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, planId: v })); }}
                     options={[
                       { value: '', label: 'No plan — assign later' },
                       ...plans.map((p) => ({
@@ -417,7 +437,7 @@ export function MemberFormModal({ member, onClose }: Props) {
                   <Field label="Start Date" hint="Defaults to today">
                     <CalendarPopover
                       value={form.planStartDate}
-                      onChange={(v) => setForm((f) => ({ ...f, planStartDate: v }))}
+                      onChange={(v) => { setIsDirty(true); setForm((f) => ({ ...f, planStartDate: v })); }}
                     />
                   </Field>
                 )}
@@ -430,7 +450,7 @@ export function MemberFormModal({ member, onClose }: Props) {
           {/* Footer — fixed at bottom */}
           <div className="shrink-0 px-6 py-4 border-t border-border flex gap-3">
             <button
-              type="button" onClick={onClose}
+              type="button" onClick={handleClose}
               className="flex-1 px-4 py-2.5 rounded-lg border border-border text-text2 text-sm font-medium hover:bg-surface2 transition-colors"
             >
               Cancel
@@ -444,6 +464,30 @@ export function MemberFormModal({ member, onClose }: Props) {
           </div>
         </form>
       </div>
+
+      {/* Unsaved changes confirmation */}
+      {showCloseConfirm && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-[60]">
+          <div className="bg-surface border border-border rounded-xl shadow-xl p-6 w-full max-w-xs mx-4">
+            <p className="text-sm text-text font-medium mb-1">Discard changes?</p>
+            <p className="text-xs text-text2 mb-4">You have unsaved changes that will be lost.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCloseConfirm(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-border text-text2 text-sm font-medium hover:bg-surface2 transition-colors"
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 rounded-lg bg-error text-white text-sm font-medium hover:bg-error/90 transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
