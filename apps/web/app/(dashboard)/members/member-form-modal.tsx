@@ -238,9 +238,9 @@ export function MemberFormModal({ member, onClose }: Props) {
       aria-modal="true"
       aria-label={isEdit ? 'Edit member' : 'Add member'}
     >
-      <div className="w-full max-w-md bg-surface h-full overflow-y-auto shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+      <div className="w-full max-w-md bg-surface h-full shadow-2xl flex flex-col overflow-hidden">
+        {/* Header — fixed */}
+        <div className="shrink-0 flex items-center justify-between px-6 py-5 border-b border-border">
           <h2 className="text-lg font-semibold text-text">{isEdit ? 'Edit Member' : 'Add Member'}</h2>
           <button
             onClick={onClose}
@@ -251,8 +251,10 @@ export function MemberFormModal({ member, onClose }: Props) {
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="flex flex-col gap-5 px-6 py-6 flex-1">
+        {/* Form — scrollable body, fixed footer */}
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5">
           {error && (
             <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
               {error}
@@ -423,8 +425,10 @@ export function MemberFormModal({ member, onClose }: Props) {
             </>
           )}
 
-          {/* Footer buttons */}
-          <div className="mt-auto pt-4 flex gap-3">
+          </div>{/* end scrollable content */}
+
+          {/* Footer — fixed at bottom */}
+          <div className="shrink-0 px-6 py-4 border-t border-border flex gap-3">
             <button
               type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 rounded-lg border border-border text-text2 text-sm font-medium hover:bg-surface2 transition-colors"
