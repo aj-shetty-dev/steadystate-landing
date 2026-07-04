@@ -105,8 +105,8 @@ export function PlanFormModal({ plan, onClose }: Props) {
       aria-modal="true"
       aria-label={isEdit ? 'Edit plan' : 'Create plan'}
     >
-      <div className="w-full max-w-md bg-surface h-full overflow-y-auto shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+      <div className="w-full max-w-md bg-surface h-full shadow-2xl flex flex-col overflow-hidden">
+        <div className="shrink-0 flex items-center justify-between px-6 py-5 border-b border-border">
           <h2 className="text-lg font-semibold text-text">
             {isEdit ? 'Edit Plan' : 'Create Plan'}
           </h2>
@@ -123,8 +123,9 @@ export function PlanFormModal({ plan, onClose }: Props) {
           onSubmit={(e) => {
             void handleSubmit(e);
           }}
-          className="flex flex-col gap-5 px-6 py-6 flex-1"
+          className="flex flex-col flex-1 min-h-0"
         >
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5">
           {error && (
             <div className="rounded-md bg-error/10 text-error text-sm px-4 py-3 ring-1 ring-error/20">
               {error}
@@ -182,13 +183,13 @@ export function PlanFormModal({ plan, onClose }: Props) {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Price (AED)" required>
+              <Field label="Price (fils)" hint="1 AED = 100 fils. e.g. 29900 = AED 299.00" required>
                 <input
                   type="number"
                   required
                   min={0}
                   step={1}
-                  placeholder="499"
+                  placeholder="29900"
                   value={form.priceAed}
                   onChange={setStr('priceAed')}
                   className={inputCls}
@@ -254,7 +255,8 @@ export function PlanFormModal({ plan, onClose }: Props) {
             </div>
           </div>
 
-          <div className="mt-auto pt-4 flex gap-3">
+          </div>{/* end scrollable content */}
+          <div className="shrink-0 px-6 py-4 border-t border-border flex gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -264,7 +266,7 @@ export function PlanFormModal({ plan, onClose }: Props) {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !form.nameEn.trim() || !form.priceAed.trim()}
               className="flex-1 px-4 py-2.5 rounded-lg bg-green text-white text-sm font-medium hover:bg-green/90 disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Plan'}

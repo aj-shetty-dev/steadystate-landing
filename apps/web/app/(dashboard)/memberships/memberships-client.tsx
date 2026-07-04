@@ -35,7 +35,7 @@ function fmtDate(d: string | null | undefined) {
 }
 
 function fmtAed(v: number) {
-  return `AED ${v.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
+  return `AED ${(v / 100).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
 }
 
 type Tab = 'memberships' | 'plans' | 'renewals';

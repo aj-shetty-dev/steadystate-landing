@@ -37,7 +37,7 @@ function renderEdit() {
 /** Fill all required fields so form validation passes in jsdom. */
 async function fillRequired(overrides?: { nameEn?: string; priceAed?: string; durationDays?: string }) {
   await userEvent.type(screen.getByPlaceholderText('Monthly Gold'), overrides?.nameEn ?? 'Test Plan');
-  await userEvent.type(screen.getByPlaceholderText('499'), overrides?.priceAed ?? '500');
+  await userEvent.type(screen.getByPlaceholderText('29900'), overrides?.priceAed ?? '500');
   // Duration already defaults to "30" — clear then retype to avoid "3030"
   const durInput = screen.getByPlaceholderText('30');
   await userEvent.clear(durInput);
@@ -91,7 +91,7 @@ describe('PlanFormModal', () => {
     it('renders the Pricing section', () => {
       renderCreate();
       expect(screen.getByText('Pricing')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('499')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('29900')).toBeInTheDocument();
     });
 
     it('renders the Terms section with duration, freeze days, and class checkbox', () => {
