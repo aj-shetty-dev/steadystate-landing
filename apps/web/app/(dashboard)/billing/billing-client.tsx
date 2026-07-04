@@ -266,7 +266,7 @@ export function BillingClient({
     setSalarySaving(true);
     try {
       await apiFetch('/billing/salary-window', {
-        method: 'PUT',
+        method: 'POST',
         body: JSON.stringify(salaryForm),
       });
       setError(null);
