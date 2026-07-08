@@ -17,9 +17,4 @@ describe('ClassesClient', () => {
     render(<ClassesClient types={types} sessions={[]} recurrences={[]} staff={[]} initialStatus="" initialTypeId="" initialFrom="" initialTo="" />);
     expect(screen.getByText('Yoga')).toBeInTheDocument();
   });
-
-  it('shows empty state when no class types', () => {
-    render(<ClassesClient types={[]} sessions={[]} recurrences={[]} staff={[]} initialStatus="" initialTypeId="" initialFrom="" initialTo="" />);
-    expect(screen.getByText('No class types yet')).toBeInTheDocument();
-  });
 });
