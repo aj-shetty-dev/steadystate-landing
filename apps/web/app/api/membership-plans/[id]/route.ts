@@ -35,7 +35,13 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const parsed = planInputSchema.partial().parse(body);
+  const parsed = planInputSchema.partial().safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: parsed.error.errors.map((e) => e.message).join('; ') },
+      { status: 400 },
+    );
+  }
 
   const existing = await prisma.membershipPlan.findFirst({
     where: { id, tenantId: user.tenantId },
@@ -47,7 +53,34 @@ export async function PATCH(
 
   const plan = await prisma.membershipPlan.update({
     where: { id },
-    data: parsed,
+    data: parsed.data,
+  });
+
+  return NextResponse.json(plan);
+}
+
+// ---------------------------------------------------------------------------
+// DELETE /api/membership-plans/[id]
+// Archive a plan (soft delete — sets active to false).
+// ---------------------------------------------------------------------------
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await requireServerUser();
+  const { id } = await params;
+
+  const existing = await prisma.membershipPlan.findFirst({
+    where: { id, tenantId: user.tenantId },
+    select: { id: true },
+  });
+  if (!existing) {
+    return NextResponse.json({ message: 'Plan not found' }, { status: 404 });
+  }
+
+  const plan = await prisma.membershipPlan.update({
+    where: { id },
+    data: { active: false },
   });
 
   return NextResponse.json(plan);
