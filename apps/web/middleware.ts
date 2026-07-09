@@ -9,33 +9,35 @@ const isApiRoute = (req: Request) => {
 };
 
 const DASHBOARD_ROUTES = new Set([
-  '/overview',
-  '/members',
-  '/memberships',
-  '/classes',
-  '/checkins',
-  '/pos',
-  '/staff',
-  '/billing',
-  '/messages',
+  '/overview', '/members', '/memberships', '/classes', '/checkins',
+  '/pos', '/staff', '/billing', '/messages',
 ]);
 
 const isDashboardRoute = (pathname: string) => {
-  // Match exact route or sub-routes (e.g. /members/123, /classes/sessions/abc)
   const top = '/' + (pathname.split('/')[1] ?? '');
   return DASHBOARD_ROUTES.has(top);
 };
 
 const isMobileBrowser = (req: Request) => {
   const ua = req.headers.get('user-agent') ?? '';
-  // "Mobi" matches iPhone, Android (with "Mobile"), and older iPads.
-  // iPadOS ≥13 reports as desktop-class Safari so it passes through.
   return /Mobi/.test(ua);
 };
+
+// E2E test mode: bypasses Clerk for browser-based E2E testing.
+// API routes still require auth (tested separately).
+const isE2ETestMode = () => process.env.E2E_TEST_MODE === 'true';
 
 /* ─── Middleware ─── */
 
 export default clerkMiddleware(async (auth, req) => {
+  const { pathname } = new URL(req.url);
+
+  // E2E test mode: bypass Clerk for page routes, keep API auth
+  if (isE2ETestMode()) {
+    if (isApiRoute(req)) return NextResponse.next();
+    return NextResponse.next();
+  }
+
   if (isApiRoute(req)) {
     const { userId } = await auth();
     if (!userId) {
@@ -43,8 +45,6 @@ export default clerkMiddleware(async (auth, req) => {
     }
     return NextResponse.next();
   }
-
-  const { pathname } = new URL(req.url);
 
   // Redirect mobile browsers away from dashboard routes
   if (pathname !== '/desktop-only' && isDashboardRoute(pathname) && isMobileBrowser(req)) {

@@ -20,6 +20,16 @@ async function isDatabaseAvailable(): Promise<boolean> {
 }
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  // E2E test mode: bypass Clerk auth for browser testing
+  if (process.env.E2E_TEST_MODE === 'true') {
+    return (
+      <div className="flex h-dvh">
+        <Sidebar user={{ id: 'e2e-user', email: 'e2e@test.com', fullName: 'E2E Tester', tenantId: 'e2e-tenant', role: 'OWNER' }} />
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 flex flex-col overflow-auto">{children}</main>
+      </div>
+    );
+  }
+
   const user = await getSessionUser();
   if (!user) {
     // If the user has a Clerk session but no tenant metadata, they need onboarding
